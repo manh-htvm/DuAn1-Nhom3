@@ -9,68 +9,62 @@
     android:layout_height="match_parent"
     tools:context=".LoginActivity">
 
-  <!-- Logo -->
-  <ImageView
-      android:layout_width="120dp"
-      android:layout_height="120dp"
-      android:src="@drawable/ic_logo_shop"
-      android:layout_marginBottom="24dp"
-      android:contentDescription="Logo" />
+    <ImageView
+        android:layout_width="120dp"
+        android:layout_height="120dp"
+        android:src="@drawable/ic_logo_shop"
+        android:layout_marginBottom="24dp"
+        android:contentDescription="Logo" />
 
-  <!-- Tiêu đề -->
-  <TextView
-      android:layout_width="wrap_content"
-      android:layout_height="wrap_content"
-      android:text="Đăng nhập hệ thống"
-      android:textSize="22sp"
-      android:textStyle="bold"
-      android:textColor="#333"
-      android:layout_marginBottom="24dp" />
+    <TextView
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:text="Đăng nhập hệ thống"
+        android:textSize="22sp"
+        android:textStyle="bold"
+        android:textColor="#333"
+        android:layout_marginBottom="24dp" />
 
-  <!-- Tên đăng nhập -->
-  <EditText
-      android:id="@+id/edtUsername"
-      android:layout_width="match_parent"
-      android:layout_height="wrap_content"
-      android:hint="Tên đăng nhập"
-      android:drawableStart="@drawable/ic_user"
-      android:drawablePadding="10dp"
-      android:background="@drawable/edit_text_bg"
-      android:padding="12dp"
-      android:inputType="textPersonName"
-      android:layout_marginBottom="16dp" />
+    <EditText
+        android:id="@+id/edtUsername"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:hint="Tên đăng nhập"
+        android:drawableStart="@drawable/ic_user"
+        android:drawablePadding="10dp"
+        android:background="@drawable/edit_text_bg"
+        android:padding="12dp"
+        android:inputType="textPersonName"
+        android:layout_marginBottom="16dp" />
 
-  <!-- Mật khẩu -->
-  <EditText
-      android:id="@+id/edtPassword"
-      android:layout_width="match_parent"
-      android:layout_height="wrap_content"
-      android:hint="Mật khẩu"
-      android:drawableStart="@drawable/ic_lock"
-      android:drawablePadding="10dp"
-      android:background="@drawable/edit_text_bg"
-      android:padding="12dp"
-      android:inputType="textPassword"
-      android:layout_marginBottom="24dp" />
+    <EditText
+        android:id="@+id/edtPassword"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:hint="Mật khẩu"
+        android:drawableStart="@drawable/ic_lock"
+        android:drawablePadding="10dp"
+        android:background="@drawable/edit_text_bg"
+        android:padding="12dp"
+        android:inputType="textPassword"
+        android:layout_marginBottom="24dp" />
 
-  <!-- Nút đăng nhập -->
-  <Button
-      android:id="@+id/btnLogin"
-      android:layout_width="match_parent"
-      android:layout_height="wrap_content"
-      android:text="Đăng nhập"
-      android:backgroundTint="#E53935"
-      android:textColor="@android:color/white"
-      android:textStyle="bold"
-      android:padding="12dp"
-      android:layout_marginBottom="16dp" />
+    <Button
+        android:id="@+id/btnLogin"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:text="Đăng nhập"
+        android:backgroundTint="#E53935"
+        android:textColor="@android:color/white"
+        android:textStyle="bold"
+        android:padding="12dp"
+        android:layout_marginBottom="16dp" />
 
-  <!-- Liên kết đăng ký -->
-  <TextView
-      android:id="@+id/tvRegister"
-      android:layout_width="wrap_content"
-      android:layout_height="wrap_content"
-      android:text="Chưa có tài khoản? Đăng ký ngay"
-      android:textColor="#1565C0" />
+    <TextView
+        android:id="@+id/tvRegister"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:text="Chưa có tài khoản? Đăng ký ngay"
+        android:textColor="#1565C0" />
 
 </LinearLayout>
