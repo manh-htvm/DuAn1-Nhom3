@@ -4,7 +4,7 @@ plugins {
 
 android {
     namespace = "fpl.manhph61584.duan1_nhom3_app"
-    compileSdk = 35
+    compileSdk = 36
 
     defaultConfig {
         applicationId = "fpl.manhph61584.duan1_nhom3_app"
