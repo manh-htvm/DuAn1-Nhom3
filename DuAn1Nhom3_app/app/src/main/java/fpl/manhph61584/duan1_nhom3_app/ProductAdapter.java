@@ -43,8 +43,13 @@ public class ProductAdapter extends RecyclerView.Adapter<ProductAdapter.ProductV
         holder.txtPrice.setText(p.getPrice() + "₫");
         holder.txtSold.setText(p.getStock() + " đã bán");
 
+        String imageUrl = p.getImage();
+        if (imageUrl != null && imageUrl.startsWith("/uploads/")) {
+            imageUrl = "http://10.0.2.2:3000" + imageUrl;
+        }
+
         Glide.with(context)
-                .load(p.getImage())
+                .load(imageUrl)
                 .placeholder(R.drawable.ic_launcher_background)
                 .error(R.drawable.ic_launcher_background)
                 .into(holder.imgProduct);

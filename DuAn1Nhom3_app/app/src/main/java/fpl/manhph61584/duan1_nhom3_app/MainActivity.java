@@ -6,6 +6,8 @@ import android.text.TextWatcher;
 import android.util.Log;
 import android.widget.EditText;
 import android.widget.Toast;
+import android.widget.ImageView;
+import android.content.Intent;
 
 import androidx.appcompat.app.AppCompatActivity;
 import androidx.recyclerview.widget.GridLayoutManager;
@@ -15,7 +17,8 @@ import java.util.ArrayList;
 import java.util.List;
 
 import fpl.manhph61584.duan1_nhom3_app.ProductAdapter;
-import fpl.manhph61584.duan1_nhom3_app.ApiClient;
+import fpl.manhph61584.duan1_nhom3_app.network.ApiClient;
+import fpl.manhph61584.duan1_nhom3_app.network.ApiService;
 import fpl.manhph61584.duan1_nhom3_app.Product;
 import retrofit2.Call;
 import retrofit2.Callback;
@@ -26,6 +29,7 @@ public class MainActivity extends AppCompatActivity {
     private RecyclerView rcvProduct;
     private ProductAdapter adapter;
     private EditText edtSearch;
+    private ImageView btnCart;
     private List<Product> productList = new ArrayList<>();
 
     @Override
@@ -39,6 +43,7 @@ public class MainActivity extends AppCompatActivity {
             // Ánh xạ view
             rcvProduct = findViewById(R.id.rcvProduct);
             edtSearch = findViewById(R.id.edtSearch);
+            btnCart = findViewById(R.id.btnCart);
 
             if (rcvProduct == null) {
                 Log.e("MainActivity", "❌ rcvProduct is null!");
@@ -56,6 +61,12 @@ public class MainActivity extends AppCompatActivity {
             rcvProduct.setAdapter(adapter);
 
             Log.d("MainActivity", "✅ RecyclerView setup done");
+
+            if (btnCart != null) {
+                btnCart.setOnClickListener(v ->
+                        startActivity(new Intent(MainActivity.this, CartActivity.class))
+                );
+            }
 
             // Load sản phẩm
             loadProducts(null);
@@ -87,7 +98,7 @@ public class MainActivity extends AppCompatActivity {
         try {
             Log.d("MainActivity", "🔄 Loading products...");
 
-            ApiClient.getService().getProducts(search).enqueue(new Callback<List<Product>>() {
+            ApiClient.getApiService().getProducts(search).enqueue(new Callback<List<Product>>() {
                 @Override
                 public void onResponse(Call<List<Product>> call, Response<List<Product>> response) {
                     try {
