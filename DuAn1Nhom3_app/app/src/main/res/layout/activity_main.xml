@@ -97,10 +97,14 @@
         android:elevation="8dp">
 
         <LinearLayout
+            android:id="@+id/btnHome"
             android:layout_width="0dp"
             android:layout_height="match_parent"
             android:layout_weight="1"
-            android:gravity="center">
+            android:gravity="center"
+            android:clickable="true"
+            android:focusable="true"
+            android:background="?android:attr/selectableItemBackground">
 
             <ImageView
                 android:src="@drawable/ic_home"
@@ -109,10 +113,14 @@
         </LinearLayout>
 
         <LinearLayout
+            android:id="@+id/btnBottomCart"
             android:layout_width="0dp"
             android:layout_height="match_parent"
             android:layout_weight="1"
-            android:gravity="center">
+            android:gravity="center"
+            android:clickable="true"
+            android:focusable="true"
+            android:background="?android:attr/selectableItemBackground">
 
             <ImageView
                 android:src="@drawable/ic_cart"
@@ -121,10 +129,14 @@
         </LinearLayout>
 
         <LinearLayout
+            android:id="@+id/btnProfile"
             android:layout_width="0dp"
             android:layout_height="match_parent"
             android:layout_weight="1"
-            android:gravity="center">
+            android:gravity="center"
+            android:clickable="true"
+            android:focusable="true"
+            android:background="?android:attr/selectableItemBackground">
 
             <ImageView
                 android:src="@drawable/ic_user"
