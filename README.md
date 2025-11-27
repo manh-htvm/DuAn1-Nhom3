@@ -1,34 +1,5 @@
 # DuAn1-Nhom3 - Ứng dụng Mua sắm Quần áo
 
-Dự án ứng dụng mua sắm quần áo với Android app và Node.js backend sử dụng MongoDB.
-
-## 📋 Mục lục
-
-- [Yêu cầu hệ thống](#yêu-cầu-hệ-thống)
-- [Cài đặt Server](#cài-đặt-server)
-- [Cài đặt Android App](#cài-đặt-android-app)
-- [Cấu trúc dự án](#cấu-trúc-dự-án)
-- [API Endpoints](#api-endpoints)
-- [Tính năng](#tính-năng)
-- [Hướng dẫn sử dụng](#hướng-dẫn-sử-dụng)
-- [Troubleshooting](#troubleshooting)
-
----
-
-## 🖥️ Yêu cầu hệ thống
-
-### Server
-- Node.js (v14 trở lên)
-- MongoDB (v4.4 trở lên)
-- npm hoặc yarn
-
-### Android App
-- Android Studio (latest version)
-- JDK 8 trở lên
-- Android SDK (API level 24+)
-
----
-
 ## 🚀 Cài đặt Server
 
 ### 1. Cài đặt MongoDB
