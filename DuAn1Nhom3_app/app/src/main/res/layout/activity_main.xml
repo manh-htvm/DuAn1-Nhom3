@@ -69,11 +69,15 @@
         android:background="#FFFFFF"
         android:elevation="8dp">
 
+        <!-- Home -->
         <LinearLayout
+            android:id="@+id/navHome"
             android:layout_width="0dp"
             android:layout_height="match_parent"
             android:layout_weight="1"
-            android:gravity="center">
+            android:gravity="center"
+            android:clickable="true"
+            android:foreground="?attr/selectableItemBackgroundBorderless">
 
             <ImageView
                 android:src="@drawable/ic_home"
@@ -81,11 +85,15 @@
                 android:layout_height="28dp"/>
         </LinearLayout>
 
+        <!-- Cart -->
         <LinearLayout
+            android:id="@+id/navCart"
             android:layout_width="0dp"
             android:layout_height="match_parent"
             android:layout_weight="1"
-            android:gravity="center">
+            android:gravity="center"
+            android:clickable="true"
+            android:foreground="?attr/selectableItemBackgroundBorderless">
 
             <ImageView
                 android:src="@drawable/ic_cart"
@@ -93,11 +101,15 @@
                 android:layout_height="28dp"/>
         </LinearLayout>
 
+        <!-- User -->
         <LinearLayout
+            android:id="@+id/navUser"
             android:layout_width="0dp"
             android:layout_height="match_parent"
             android:layout_weight="1"
-            android:gravity="center">
+            android:gravity="center"
+            android:clickable="true"
+            android:foreground="?attr/selectableItemBackgroundBorderless">
 
             <ImageView
                 android:src="@drawable/ic_user"
