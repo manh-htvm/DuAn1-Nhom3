@@ -37,7 +37,6 @@
 
     </LinearLayout>
 
-    <!-- Tabs -->
     <HorizontalScrollView
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
@@ -48,38 +47,13 @@
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
             android:orientation="horizontal"
-            android:padding="12dp">
-
-            <TextView
-                android:id="@+id/tabAll"
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                android:text="Tất cả"
-                android:textSize="15sp"
-                android:padding="8dp"
-                android:layout_marginRight="20dp" />
-
-            <TextView
-                android:id="@+id/tabWinter"
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                android:text="Quần áo mùa đông"
-                android:textSize="15sp"
-                android:padding="8dp"
-                android:layout_marginRight="20dp" />
-
-            <TextView
-                android:id="@+id/tabSummer"
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                android:text="Quần áo mùa hè"
-                android:textSize="15sp"
-                android:padding="8dp" />
-
-        </LinearLayout>
+            android:padding="12dp" />
     </HorizontalScrollView>
 
+
     <!-- Grid sản phẩm -->
+
+    <!-- Bottom Navigation -->
     <androidx.recyclerview.widget.RecyclerView
         android:id="@+id/rcvProduct"
         android:layout_width="match_parent"
@@ -87,7 +61,6 @@
         android:layout_weight="1"
         android:padding="8dp" />
 
-    <!-- Bottom Navigation -->
     <LinearLayout
         android:layout_width="match_parent"
         android:layout_height="70dp"
