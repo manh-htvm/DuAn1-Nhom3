@@ -40,7 +40,11 @@ public class LoginActivity extends AppCompatActivity {
         apiService = ApiClient.getApiService();
 
         btnLogin.setOnClickListener(v -> attemptLogin());
-        tvRegister.setOnClickListener(v -> startActivity(new Intent(this, RegisterActivity.class)));
+        tvRegister.setOnClickListener(v -> {
+            Intent intent = new Intent(this, RegisterActivity.class);
+            startActivity(intent);
+            overridePendingTransition(R.anim.slide_in_right, R.anim.slide_out_left);
+        });
     }
 
     private void attemptLogin() {
@@ -61,7 +65,9 @@ public class LoginActivity extends AppCompatActivity {
                     LoginResponse body = response.body();
                     UserManager.saveSession(body.getUser(), body.getToken());
                     Toast.makeText(LoginActivity.this, "Đăng nhập thành công!", Toast.LENGTH_SHORT).show();
-                    startActivity(new Intent(LoginActivity.this, MainActivity.class));
+                    Intent intent = new Intent(LoginActivity.this, MainActivity.class);
+                    startActivity(intent);
+                    overridePendingTransition(R.anim.slide_in_left, R.anim.slide_out_right);
                     finish();
                 } else {
                     Toast.makeText(LoginActivity.this, "Sai email hoặc mật khẩu!", Toast.LENGTH_SHORT).show();

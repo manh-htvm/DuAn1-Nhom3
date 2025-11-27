@@ -9,6 +9,7 @@ public class UserDto {
     private String name;
     private String email;
     private String role;
+    private String avatar;
 
     public String getId() {
         return _id;
@@ -40,5 +41,14 @@ public class UserDto {
 
     public void setRole(String role) {
         this.role = role;
+    }
+    
+
+    public String getAvatar() {
+        return avatar;
+    }
+
+    public void setAvatar(String avatar) {
+        this.avatar = avatar;
     }
 }
