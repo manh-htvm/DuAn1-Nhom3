@@ -95,6 +95,13 @@ public class MainActivity extends AppCompatActivity {
         } catch (Exception e) {
             Log.e("MainActivity", "❌ onCreate error: ", e);
         }
+        LinearLayout navHome = findViewById(R.id.navHome);
+        LinearLayout navCart = findViewById(R.id.navCart);
+        LinearLayout navUser = findViewById(R.id.navUser);
+
+        navCart.setOnClickListener(v -> {
+            startActivity(new Intent(this, OrderHistoryActivity.class));
+        });
     }
 
     // -----------------------------
