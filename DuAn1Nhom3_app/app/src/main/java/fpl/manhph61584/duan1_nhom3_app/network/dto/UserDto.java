@@ -1,7 +1,11 @@
 package fpl.manhph61584.duan1_nhom3_app.network.dto;
 
+import com.google.gson.annotations.SerializedName;
+
 public class UserDto {
+    @SerializedName("id")
     private String _id;
+
     private String name;
     private String email;
     private String role;
@@ -38,6 +42,7 @@ public class UserDto {
     public void setRole(String role) {
         this.role = role;
     }
+    
 
     public String getAvatar() {
         return avatar;
@@ -47,10 +52,3 @@ public class UserDto {
         this.avatar = avatar;
     }
 }
-
-
-
-
-
-
-

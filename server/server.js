@@ -57,7 +57,9 @@ app.get('/', (req, res) => {
 
 const PORT = process.env.PORT || 3000;
 
-app.listen(PORT, () => {
+// Lắng nghe tất cả interface mạng (0.0.0.0) để thiết bị thật trong LAN truy cập được
+app.listen(PORT, '0.0.0.0', () => {
   console.log(`Server đang chạy trên port ${PORT}`);
 });
+
 
