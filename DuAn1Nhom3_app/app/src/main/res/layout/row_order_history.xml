@@ -40,7 +40,7 @@
 
             <Button
                 android:id="@+id/btnBuyAgain"
-                android:background="@drawable/btn_buy_again"
+                android:backgroundTint="#03870D"
                 android:text="Mua lại"
                 android:textColor="#FFFFFF"
                 android:gravity="center"
@@ -50,11 +50,11 @@
 
             <Button
                 android:id="@+id/btnReview"
-                android:background="@drawable/btn_review"
+                android:backgroundTint="#F01E1E"
                 android:text="Đánh giá"
                 android:textColor="#FFFFFF"
                 android:gravity="center"
-                android:layout_width="100dp"
+                android:layout_width="120dp"
                 android:layout_height="40dp" />
         </LinearLayout>
 
