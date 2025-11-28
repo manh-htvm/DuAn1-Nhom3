@@ -1,8 +1,8 @@
 package fpl.manhph61584.duan1_nhom3_app.network.dto;
 
-public class UpdateProfileResponse {
+public class CreateOrderResponse {
     private String message;
-    private UserDto user;
+    private OrderDto order;
 
     public String getMessage() {
         return message;
@@ -12,14 +12,12 @@ public class UpdateProfileResponse {
         this.message = message;
     }
 
-    public UserDto getUser() {
-        return user;
+    public OrderDto getOrder() {
+        return order;
     }
 
-    public void setUser(UserDto user) {
-        this.user = user;
+    public void setOrder(OrderDto order) {
+        this.order = order;
     }
 }
-
-
 

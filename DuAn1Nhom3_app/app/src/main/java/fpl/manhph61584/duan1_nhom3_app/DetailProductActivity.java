@@ -23,7 +23,6 @@ import java.util.Date;
 import java.util.List;
 import java.util.Locale;
 
-import fpl.manhph61584.duan1_nhom3_app.R;
 import fpl.manhph61584.duan1_nhom3_app.network.ApiClient;
 import fpl.manhph61584.duan1_nhom3_app.network.ApiService;
 import fpl.manhph61584.duan1_nhom3_app.network.dto.AddToCartRequest;
@@ -300,7 +299,18 @@ public class DetailProductActivity extends AppCompatActivity {
         });
 
         btnGoToCart.setOnClickListener(v -> {
+            if (currentProduct == null) {
+                Toast.makeText(this, "Đang tải dữ liệu sản phẩm...", Toast.LENGTH_SHORT).show();
+                return;
+            }
+            
+            // Mua ngay: truyền thông tin sản phẩm qua Intent
             android.content.Intent intent = new android.content.Intent(this, CartActivity.class);
+            intent.putExtra("buy_now", true);
+            intent.putExtra("product_id", currentProduct.getId());
+            intent.putExtra("quantity", quantity);
+            intent.putExtra("color", selectedColor == null || selectedColor.isEmpty() ? "Mặc định" : selectedColor);
+            intent.putExtra("size", selectedSize == null || selectedSize.isEmpty() ? "Free size" : selectedSize);
             startActivity(intent);
             overridePendingTransition(R.anim.slide_in_right, R.anim.slide_out_left);
         });

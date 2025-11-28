@@ -1,16 +1,18 @@
 package fpl.manhph61584.duan1_nhom3_app.network.dto;
 
-public class AddToCartRequest {
+public class OrderItemRequest {
     private String productId;
     private int quantity;
+    private double price;
     private String color;
     private String size;
 
-    public AddToCartRequest(String productId, int quantity, String color, String size) {
+    public OrderItemRequest(String productId, int quantity, double price, String color, String size) {
         this.productId = productId;
         this.quantity = quantity;
-        this.color = color != null ? color : "Mặc định";
-        this.size = size != null ? size : "Free size";
+        this.price = price;
+        this.color = color;
+        this.size = size;
     }
 
     public String getProductId() {
@@ -29,6 +31,14 @@ public class AddToCartRequest {
         this.quantity = quantity;
     }
 
+    public double getPrice() {
+        return price;
+    }
+
+    public void setPrice(double price) {
+        this.price = price;
+    }
+
     public String getColor() {
         return color;
     }
@@ -45,9 +55,4 @@ public class AddToCartRequest {
         this.size = size;
     }
 }
-
-
-
-
-
 

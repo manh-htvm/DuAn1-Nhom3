@@ -38,6 +38,7 @@ public class ProfileActivity extends AppCompatActivity {
         loadUserInfo();
         setupBottomNavigation();
         setupSaveButton();
+        setupOrderHistory();
 
         btnLogout.setOnClickListener(v -> {
             UserManager.clearSession();
@@ -87,6 +88,17 @@ public class ProfileActivity extends AppCompatActivity {
             startActivityForResult(intent, 1);
             overridePendingTransition(R.anim.slide_in_right, R.anim.slide_out_left);
         });
+    }
+
+    private void setupOrderHistory() {
+        LinearLayout layoutOrderHistory = findViewById(R.id.layoutOrderHistory);
+        if (layoutOrderHistory != null) {
+            layoutOrderHistory.setOnClickListener(v -> {
+                Intent intent = new Intent(ProfileActivity.this, OrderHistoryActivity.class);
+                startActivity(intent);
+                overridePendingTransition(R.anim.slide_in_right, R.anim.slide_out_left);
+            });
+        }
     }
 
 

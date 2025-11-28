@@ -93,6 +93,19 @@ public interface ApiService {
     @Multipart
     @POST("upload")
     Call<UploadResponse> uploadImage(@Part MultipartBody.Part image);
+
+    // Order endpoints
+    @POST("orders")
+    Call<fpl.manhph61584.duan1_nhom3_app.network.dto.CreateOrderResponse> createOrder(
+        @Header("Authorization") String token,
+        @Body fpl.manhph61584.duan1_nhom3_app.network.dto.CreateOrderRequest request
+    );
+
+    @GET("orders")
+    Call<List<fpl.manhph61584.duan1_nhom3_app.network.dto.OrderDto>> getOrders(
+        @Header("Authorization") String token,
+        @Query("status") String status
+    );
 }
 
 

@@ -10,13 +10,11 @@ import android.widget.LinearLayout;
 import android.widget.TextView;
 import android.widget.Toast;
 
-
 import androidx.annotation.Nullable;
 import androidx.appcompat.app.AppCompatActivity;
 import androidx.recyclerview.widget.LinearLayoutManager;
 import androidx.recyclerview.widget.RecyclerView;
 
-import java.util.ArrayList;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -24,6 +22,7 @@ import fpl.manhph61584.duan1_nhom3_app.network.ApiClient;
 import fpl.manhph61584.duan1_nhom3_app.network.ApiService;
 import fpl.manhph61584.duan1_nhom3_app.Voucher;
 import fpl.manhph61584.duan1_nhom3_app.UserManager;
+import fpl.manhph61584.duan1_nhom3_app.Product;
 import retrofit2.Call;
 import retrofit2.Callback;
 import retrofit2.Response;
@@ -31,15 +30,15 @@ import retrofit2.Response;
 public class CartActivity extends AppCompatActivity implements VoucherAdapter.OnVoucherSelectListener {
 
     private RecyclerView recyclerView;
-    private RecyclerView recyclerViewVouchers;
-    private TextView txtSubtotal, txtTotal, txtDiscount, txtSelectedVoucher;
-    private LinearLayout layoutDiscount;
+    private TextView txtSubtotal, txtTotal, txtDiscount, txtSelectedVoucherCode, txtSelectedVoucherName;
+    private LinearLayout layoutDiscount, layoutVoucherSelector;
     private EditText edtPhone, edtAddress, edtNote;
     private Button btnCheckout;
     private CartAdapter adapter;
     private VoucherAdapter voucherAdapter;
     private Voucher selectedVoucher;
     private List<Voucher> vouchers = new ArrayList<>();
+    private boolean isBuyNowMode = false;
 
     @Override
     protected void onCreate(@Nullable Bundle savedInstanceState) {
@@ -47,12 +46,13 @@ public class CartActivity extends AppCompatActivity implements VoucherAdapter.On
         setContentView(R.layout.activity_cart);
 
         recyclerView = findViewById(R.id.cartRecyclerView);
-        recyclerViewVouchers = findViewById(R.id.recyclerViewVouchers);
         txtSubtotal = findViewById(R.id.txtSubtotal);
         txtTotal = findViewById(R.id.txtTotal);
         txtDiscount = findViewById(R.id.txtDiscount);
-        txtSelectedVoucher = findViewById(R.id.txtSelectedVoucher);
+        txtSelectedVoucherCode = findViewById(R.id.txtSelectedVoucherCode);
+        txtSelectedVoucherName = findViewById(R.id.txtSelectedVoucherName);
         layoutDiscount = findViewById(R.id.layoutDiscount);
+        layoutVoucherSelector = findViewById(R.id.layoutVoucherSelector);
         edtPhone = findViewById(R.id.edtPhone);
         edtAddress = findViewById(R.id.edtAddress);
         edtNote = findViewById(R.id.edtNote);
@@ -63,62 +63,76 @@ public class CartActivity extends AppCompatActivity implements VoucherAdapter.On
         recyclerView.setLayoutManager(layoutManager);
         recyclerView.setAdapter(adapter);
         
-        loadCartFromServer();
+        // Kiểm tra nếu là "Mua ngay" từ DetailProductActivity
+        isBuyNowMode = getIntent().getBooleanExtra("buy_now", false);
+        if (isBuyNowMode) {
+            String productId = getIntent().getStringExtra("product_id");
+            int quantity = getIntent().getIntExtra("quantity", 1);
+            String color = getIntent().getStringExtra("color");
+            String size = getIntent().getStringExtra("size");
+            
+            if (productId != null && !productId.isEmpty()) {
+                loadProductForBuyNow(productId, quantity, color, size);
+            } else {
+                loadCartFromServer();
+            }
+        } else {
+            loadCartFromServer();
+        }
 
         voucherAdapter = new VoucherAdapter(vouchers, this);
-        recyclerViewVouchers.setLayoutManager(new LinearLayoutManager(this));
-        recyclerViewVouchers.setAdapter(voucherAdapter);
+
+        // Setup voucher selector click
+        if (layoutVoucherSelector != null) {
+            layoutVoucherSelector.setOnClickListener(v -> showVoucherDialog());
+        }
 
         loadVouchers();
         updateTotal();
-        setupBottomNavigation();
 
         btnCheckout.setOnClickListener(v -> handleCheckout());
     }
 
 
-    private void setupBottomNavigation() {
-        LinearLayout btnHome = findViewById(R.id.btnHome);
-        LinearLayout btnBottomCart = findViewById(R.id.btnBottomCart);
-        LinearLayout btnProfile = findViewById(R.id.btnProfile);
-
-        if (btnHome != null) {
-            btnHome.setOnClickListener(v -> {
-                Intent intent = new Intent(CartActivity.this, MainActivity.class);
-                intent.setFlags(Intent.FLAG_ACTIVITY_CLEAR_TOP | Intent.FLAG_ACTIVITY_NEW_TASK);
-                startActivity(intent);
-                overridePendingTransition(R.anim.slide_in_left, R.anim.slide_out_right);
-                finish();
-            });
-        }
-
-        if (btnBottomCart != null) {
-            btnBottomCart.setOnClickListener(v -> {
-                Intent intent = new Intent(CartActivity.this, OrderStatusActivity.class);
-                startActivity(intent);
-                overridePendingTransition(R.anim.slide_in_right, R.anim.slide_out_left);
-            });
-        }
-
-        if (btnProfile != null) {
-            btnProfile.setOnClickListener(v -> {
-                if (UserManager.getCurrentUser() == null) {
-                    Intent intent = new Intent(CartActivity.this, LoginActivity.class);
-                    startActivity(intent);
-                    overridePendingTransition(R.anim.slide_in_right, R.anim.slide_out_left);
-                } else {
-                    Intent intent = new Intent(CartActivity.this, ProfileActivity.class);
-                    startActivity(intent);
-                    overridePendingTransition(R.anim.slide_in_right, R.anim.slide_out_left);
-                }
-            });
-        }
-    }
 
     @Override
     protected void onResume() {
         super.onResume();
-        loadCartFromServer();
+        // Không reload nếu đang ở chế độ "Mua ngay" (để giữ sản phẩm "Mua ngay")
+        if (!isBuyNowMode) {
+            loadCartFromServer();
+        }
+    }
+
+    private void loadProductForBuyNow(String productId, int quantity, String color, String size) {
+        // Load product từ API
+        ApiClient.getApiService().getProductDetail(productId).enqueue(new Callback<Product>() {
+            @Override
+            public void onResponse(Call<Product> call, Response<Product> response) {
+                if (response.isSuccessful() && response.body() != null) {
+                    Product product = response.body();
+                    CartItem buyNowItem = new CartItem(product, quantity, color, size);
+                    
+                    // Chỉ hiển thị sản phẩm "Mua ngay", không load thêm sản phẩm khác từ giỏ hàng
+                    List<CartItem> cartItems = new ArrayList<>();
+                    cartItems.add(buyNowItem);
+                    
+                    // Hiển thị danh sách chỉ với sản phẩm "Mua ngay"
+                    adapter = new CartAdapter(CartActivity.this, cartItems);
+                    recyclerView.setAdapter(adapter);
+                    updateTotal();
+                } else {
+                    // Nếu không load được sản phẩm, load giỏ hàng bình thường
+                    loadCartFromServer();
+                }
+            }
+
+            @Override
+            public void onFailure(Call<Product> call, Throwable t) {
+                // Nếu không load được sản phẩm, load giỏ hàng bình thường
+                loadCartFromServer();
+            }
+        });
     }
 
     private void loadCartFromServer() {
@@ -236,22 +250,109 @@ public class CartActivity extends AppCompatActivity implements VoucherAdapter.On
     public void onVoucherSelected(Voucher voucher) {
         selectedVoucher = voucher;
         voucherAdapter.setSelectedVoucher(voucher);
-        if (voucher != null) {
-            txtSelectedVoucher.setText("Đã chọn: " + voucher.getCode());
-            txtSelectedVoucher.setVisibility(TextView.VISIBLE);
-        } else {
-            txtSelectedVoucher.setVisibility(TextView.GONE);
-        }
+        updateVoucherDisplay();
         updateTotal();
+    }
+    
+    private void updateVoucherDisplay() {
+        if (selectedVoucher != null) {
+            txtSelectedVoucherCode.setText(selectedVoucher.getCode());
+            txtSelectedVoucherCode.setTextColor(getResources().getColor(android.R.color.black));
+            txtSelectedVoucherName.setText(selectedVoucher.getName());
+            txtSelectedVoucherName.setVisibility(TextView.VISIBLE);
+        } else {
+            txtSelectedVoucherCode.setText("Chọn mã giảm giá");
+            txtSelectedVoucherCode.setTextColor(getResources().getColor(android.R.color.darker_gray));
+            txtSelectedVoucherName.setText("");
+            txtSelectedVoucherName.setVisibility(TextView.GONE);
+        }
+    }
+    
+    private void showVoucherDialog() {
+        // Tính tổng tiền hiện tại
+        double subtotal = 0;
+        if (adapter != null && adapter.items != null) {
+            for (CartItem item : adapter.items) {
+                subtotal += item.getSubtotal();
+            }
+        }
+        
+        // Lọc vouchers có thể áp dụng
+        final List<Voucher> applicableVouchers = new ArrayList<>();
+        for (Voucher voucher : vouchers) {
+            if (voucher.canApply(subtotal)) {
+                applicableVouchers.add(voucher);
+            }
+        }
+        
+        if (applicableVouchers.isEmpty()) {
+            Toast.makeText(this, "Không có mã giảm giá nào khả dụng", Toast.LENGTH_SHORT).show();
+            return;
+        }
+        
+        // Tạo dialog với RecyclerView
+        android.app.AlertDialog.Builder builder = new android.app.AlertDialog.Builder(this);
+        builder.setTitle("Chọn mã giảm giá");
+        
+        View dialogView = getLayoutInflater().inflate(R.layout.dialog_vouchers, null);
+        RecyclerView recyclerViewVouchers = dialogView.findViewById(R.id.recyclerViewVouchers);
+        TextView txtNoVoucher = dialogView.findViewById(R.id.txtNoVoucher);
+        
+        recyclerViewVouchers.setVisibility(View.VISIBLE);
+        txtNoVoucher.setVisibility(View.GONE);
+        
+        builder.setView(dialogView);
+        builder.setNegativeButton("Hủy", null);
+        builder.setNeutralButton("Bỏ chọn", (dialogInterface, which) -> {
+            selectedVoucher = null;
+            voucherAdapter.setSelectedVoucher(null);
+            updateVoucherDisplay();
+            updateTotal();
+        });
+        
+        // Tạo dialog trước khi tạo adapter để có thể dùng trong inner class
+        final android.app.AlertDialog dialog = builder.create();
+        
+        // Tạo adapter với listener để đóng dialog sau khi chọn
+        VoucherAdapter dialogAdapter = new VoucherAdapter(applicableVouchers, new VoucherAdapter.OnVoucherSelectListener() {
+            @Override
+            public void onVoucherSelected(Voucher voucher) {
+                // Gọi method của CartActivity
+                CartActivity.this.onVoucherSelected(voucher);
+                dialog.dismiss();
+            }
+        });
+        dialogAdapter.setSelectedVoucher(selectedVoucher);
+        recyclerViewVouchers.setLayoutManager(new LinearLayoutManager(this));
+        recyclerViewVouchers.setAdapter(dialogAdapter);
+        
+        dialog.show();
     }
 
     private void updateTotal() {
-        double subtotal = CartManager.getTotal();
+        // Tính tổng từ adapter (bao gồm cả sản phẩm "Mua ngay")
+        double subtotal = 0;
+        if (adapter != null && adapter.items != null) {
+            for (CartItem item : adapter.items) {
+                subtotal += item.getSubtotal();
+            }
+        }
         txtSubtotal.setText(String.format("%,.0f₫", subtotal));
 
         double discount = 0;
         if (selectedVoucher != null) {
-            discount = selectedVoucher.calculateDiscount(subtotal);
+            // Kiểm tra voucher có thể áp dụng không
+            if (!selectedVoucher.canApply(subtotal)) {
+                // Tự động bỏ chọn voucher nếu không thể áp dụng
+                selectedVoucher = null;
+                voucherAdapter.setSelectedVoucher(null);
+                updateVoucherDisplay();
+            } else {
+                discount = selectedVoucher.calculateDiscount(subtotal);
+            }
+        }
+        
+        if (discount > 0) {
             txtDiscount.setText(String.format("-%,.0f₫", discount));
             layoutDiscount.setVisibility(LinearLayout.VISIBLE);
         } else {
@@ -268,7 +369,8 @@ public class CartActivity extends AppCompatActivity implements VoucherAdapter.On
         String address = edtAddress.getText().toString().trim();
         String note = edtNote.getText().toString().trim();
 
-        if (CartManager.getCartItems().isEmpty()) {
+        // Kiểm tra từ adapter (bao gồm cả sản phẩm "Mua ngay")
+        if (adapter == null || adapter.items == null || adapter.items.isEmpty()) {
             Toast.makeText(this, "Giỏ hàng trống", Toast.LENGTH_SHORT).show();
             return;
         }
@@ -285,48 +387,128 @@ public class CartActivity extends AppCompatActivity implements VoucherAdapter.On
             return;
         }
 
-        // TODO: Tạo đơn hàng và gửi lên server
-        Toast.makeText(this, "Thanh toán thành công", Toast.LENGTH_SHORT).show();
-        
-        // Xóa tất cả sản phẩm khỏi giỏ hàng sau khi thanh toán
+        // Tạo đơn hàng và gửi lên server
         String token = UserManager.getAuthToken();
-        if (token != null) {
-            String authHeader = "Bearer " + token;
-            List<CartItem> items = new ArrayList<>(CartManager.getCartItems());
-            for (CartItem item : items) {
-                if (item.getProduct() != null && item.getProduct().getId() != null) {
-                    // Xóa từ server
-                    ApiClient.getApiService().removeFromCart(authHeader, item.getProduct().getId()).enqueue(new Callback<fpl.manhph61584.duan1_nhom3_app.network.dto.CartResponse>() {
-                        @Override
-                        public void onResponse(Call<fpl.manhph61584.duan1_nhom3_app.network.dto.CartResponse> call, Response<fpl.manhph61584.duan1_nhom3_app.network.dto.CartResponse> response) {
-                            // Reload cart
-                            loadCartFromServer();
-                        }
+        if (token == null) {
+            Toast.makeText(this, "Vui lòng đăng nhập để thanh toán", Toast.LENGTH_SHORT).show();
+            return;
+        }
 
-                        @Override
-                        public void onFailure(Call<fpl.manhph61584.duan1_nhom3_app.network.dto.CartResponse> call, Throwable t) {
-                            // Reload cart anyway
-                            loadCartFromServer();
-                        }
-                    });
+        btnCheckout.setEnabled(false);
+        btnCheckout.setText("Đang xử lý...");
+
+        // Tính tổng tiền
+        double subtotal = 0;
+        for (CartItem item : adapter.items) {
+            subtotal += item.getSubtotal();
+        }
+        double discount = selectedVoucher != null ? selectedVoucher.calculateDiscount(subtotal) : 0;
+        double finalAmount = subtotal - discount;
+
+        // Lấy voucher ID nếu có
+        String voucherId = selectedVoucher != null ? selectedVoucher.getId() : null;
+
+        // Luôn gửi items trực tiếp trong request (không phụ thuộc vào giỏ hàng trên server)
+        List<fpl.manhph61584.duan1_nhom3_app.network.dto.OrderItemRequest> orderItems = new ArrayList<>();
+        if (adapter != null && adapter.items != null && !adapter.items.isEmpty()) {
+            for (CartItem item : adapter.items) {
+                if (item.getProduct() != null && item.getProduct().getId() != null) {
+                    fpl.manhph61584.duan1_nhom3_app.network.dto.OrderItemRequest orderItem = 
+                        new fpl.manhph61584.duan1_nhom3_app.network.dto.OrderItemRequest(
+                            item.getProduct().getId(),
+                            item.getQuantity(),
+                            item.getUnitPrice(),
+                            item.getColor() != null ? item.getColor() : "Mặc định",
+                            item.getSize() != null ? item.getSize() : "Free size"
+                        );
+                    orderItems.add(orderItem);
                 }
             }
-        } else {
-            // Chưa đăng nhập, chỉ xóa local
-            CartManager.clear();
-            loadCartFromServer();
         }
         
-        // Clear form
-        edtPhone.setText("");
-        edtAddress.setText("");
-        edtNote.setText("");
+        // Kiểm tra nếu không có items
+        if (orderItems.isEmpty()) {
+            btnCheckout.setEnabled(true);
+            btnCheckout.setText("Thanh toán");
+            Toast.makeText(this, "Không có sản phẩm để thanh toán", Toast.LENGTH_SHORT).show();
+            return;
+        }
+        
+        // Tạo request với items
+        fpl.manhph61584.duan1_nhom3_app.network.dto.CreateOrderRequest request = 
+            new fpl.manhph61584.duan1_nhom3_app.network.dto.CreateOrderRequest(phone, address, note, voucherId, orderItems);
+
+        String authHeader = "Bearer " + token;
+        
+        // Log request để debug
+        android.util.Log.d("Payment", "Sending order request with " + orderItems.size() + " items");
+        
+        ApiClient.getApiService().createOrder(authHeader, request).enqueue(new Callback<fpl.manhph61584.duan1_nhom3_app.network.dto.CreateOrderResponse>() {
+            @Override
+            public void onResponse(Call<fpl.manhph61584.duan1_nhom3_app.network.dto.CreateOrderResponse> call, Response<fpl.manhph61584.duan1_nhom3_app.network.dto.CreateOrderResponse> response) {
+                btnCheckout.setEnabled(true);
+                btnCheckout.setText("Thanh toán");
+                
+                android.util.Log.d("Payment", "Response code: " + response.code());
+                
+                if (response.isSuccessful() && response.body() != null) {
+                    android.util.Log.d("Payment", "✅ Payment successful! Order saved to MongoDB");
+                    Toast.makeText(CartActivity.this, "Thanh toán thành công!", Toast.LENGTH_SHORT).show();
+                    
+                    // Clear form và giỏ hàng
+                    edtPhone.setText("");
+                    edtAddress.setText("");
+                    edtNote.setText("");
+                    selectedVoucher = null;
+                    updateVoucherDisplay();
+                    
+                    // Reload cart (sẽ trống sau khi tạo order)
+                    loadCartFromServer();
+                    
+                    // Quay về MainActivity
+                    Intent intent = new Intent(CartActivity.this, MainActivity.class);
+                    intent.setFlags(Intent.FLAG_ACTIVITY_CLEAR_TOP | Intent.FLAG_ACTIVITY_NEW_TASK);
+                    startActivity(intent);
+                    finish();
+                } else {
+                    String errorMsg = "Lỗi thanh toán";
+                    try {
+                        if (response.errorBody() != null) {
+                            String errorStr = response.errorBody().string();
+                            android.util.Log.e("PaymentError", "Error response: " + errorStr);
+                            
+                            // Thử parse JSON error message
+                            try {
+                                com.google.gson.JsonObject jsonObject = new com.google.gson.Gson().fromJson(errorStr, com.google.gson.JsonObject.class);
+                                if (jsonObject.has("message")) {
+                                    errorMsg = jsonObject.get("message").getAsString();
+                                } else if (jsonObject.has("error")) {
+                                    errorMsg = jsonObject.get("error").getAsString();
+                                } else {
+                                    errorMsg += ": " + errorStr;
+                                }
+                            } catch (Exception e) {
+                                errorMsg += ": " + errorStr;
+                            }
+                        } else {
+                            errorMsg += " (Code: " + response.code() + ")";
+                        }
+                    } catch (Exception e) {
+                        android.util.Log.e("PaymentError", "Error reading error body", e);
+                        errorMsg += ": " + response.message() + " (Code: " + response.code() + ")";
+                    }
+                    Toast.makeText(CartActivity.this, errorMsg, Toast.LENGTH_LONG).show();
+                }
+            }
+
+            @Override
+            public void onFailure(Call<fpl.manhph61584.duan1_nhom3_app.network.dto.CreateOrderResponse> call, Throwable t) {
+                btnCheckout.setEnabled(true);
+                btnCheckout.setText("Thanh toán");
+                Toast.makeText(CartActivity.this, "Lỗi kết nối: " + t.getMessage(), Toast.LENGTH_SHORT).show();
+            }
+        });
     }
 }
-
-
-
-
-
 
 

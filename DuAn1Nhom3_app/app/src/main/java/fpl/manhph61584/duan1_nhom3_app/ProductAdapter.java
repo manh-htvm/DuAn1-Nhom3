@@ -15,7 +15,6 @@ import com.bumptech.glide.Glide;
 
 import java.util.List;
 
-import fpl.manhph61584.duan1_nhom3_app.R;
 import fpl.manhph61584.duan1_nhom3_app.Product;
 import fpl.manhph61584.duan1_nhom3_app.DetailProductActivity;
 

@@ -1,13 +1,11 @@
 package fpl.manhph61584.duan1_nhom3_app.network.dto;
 
-import com.google.gson.annotations.SerializedName;
 import fpl.manhph61584.duan1_nhom3_app.Product;
 
-public class CartItemDto {
-    @SerializedName("product")
+public class OrderItemDto {
     private Product product;
-    
     private int quantity;
+    private double price;
     private String color;
     private String size;
 
@@ -27,6 +25,14 @@ public class CartItemDto {
         this.quantity = quantity;
     }
 
+    public double getPrice() {
+        return price;
+    }
+
+    public void setPrice(double price) {
+        this.price = price;
+    }
+
     public String getColor() {
         return color;
     }
@@ -43,6 +49,4 @@ public class CartItemDto {
         this.size = size;
     }
 }
-
-
 

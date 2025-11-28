@@ -140,9 +140,41 @@ public class EditProfileActivity extends AppCompatActivity {
             byte[] imageBytes = buffer.toByteArray();
             inputStream.close();
 
-            // Tạo RequestBody từ byte array
-            RequestBody requestFile = RequestBody.create(MediaType.parse("image/*"), imageBytes);
-            MultipartBody.Part body = MultipartBody.Part.createFormData("image", "avatar.jpg", requestFile);
+            // Detect MIME type thực tế từ URI
+            String mimeType = getContentResolver().getType(imageUri);
+            if (mimeType == null || !mimeType.startsWith("image/")) {
+                // Fallback: kiểm tra extension từ URI
+                String uriString = imageUri.toString().toLowerCase();
+                if (uriString.endsWith(".png")) {
+                    mimeType = "image/png";
+                } else if (uriString.endsWith(".jpg") || uriString.endsWith(".jpeg")) {
+                    mimeType = "image/jpeg";
+                } else if (uriString.endsWith(".gif")) {
+                    mimeType = "image/gif";
+                } else if (uriString.endsWith(".webp")) {
+                    mimeType = "image/webp";
+                } else {
+                    mimeType = "image/jpeg"; // Default
+                }
+            }
+
+            // Tạo tên file với extension đúng
+            String fileName = "avatar";
+            if (mimeType.contains("png")) {
+                fileName = "avatar.png";
+            } else if (mimeType.contains("jpeg") || mimeType.contains("jpg")) {
+                fileName = "avatar.jpg";
+            } else if (mimeType.contains("gif")) {
+                fileName = "avatar.gif";
+            } else if (mimeType.contains("webp")) {
+                fileName = "avatar.webp";
+            } else {
+                fileName = "avatar.jpg"; // Default
+            }
+
+            // Tạo RequestBody từ byte array với MIME type đúng
+            RequestBody requestFile = RequestBody.create(MediaType.parse(mimeType), imageBytes);
+            MultipartBody.Part body = MultipartBody.Part.createFormData("image", fileName, requestFile);
 
             ApiClient.getApiService().uploadImage(body).enqueue(new Callback<UploadResponse>() {
                 @Override

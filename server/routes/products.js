@@ -84,6 +84,17 @@ router.post("/", upload.single("image"), async (req, res) => {
     });
     res.status(201).json(product);
   } catch (err) {
+    // Handle duplicate key errors (especially for old variant indexes)
+    if (err.code === 11000 || err.message.includes('duplicate key')) {
+      const errorMessage = err.message.includes('variants') 
+        ? 'Lỗi: Index cũ trong database đang gây xung đột. Vui lòng chạy script fix-indexes.js để sửa lỗi này.'
+        : 'Lỗi: Dữ liệu trùng lặp. ' + err.message;
+      return res.status(400).json({ 
+        error: errorMessage,
+        details: err.message,
+        fix: err.message.includes('variants') ? 'Chạy: node scripts/fix-indexes.js' : null
+      });
+    }
     res.status(400).json({ error: err.message });
   }
 });

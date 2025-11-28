@@ -4,7 +4,24 @@
     <option name="autoReloadType" value="NONE" />
   </component>
   <component name="ChangeListManager">
-    <list default="true" id="b144e139-d215-44c3-9c49-7819a857c80f" name="Changes" comment="" />
+    <list default="true" id="b144e139-d215-44c3-9c49-7819a857c80f" name="Changes" comment="">
+      <change beforePath="$PROJECT_DIR$/DuAn1Nhom3_app/app/src/main/AndroidManifest.xml" beforeDir="false" afterPath="$PROJECT_DIR$/DuAn1Nhom3_app/app/src/main/AndroidManifest.xml" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/DuAn1Nhom3_app/app/src/main/java/fpl/manhph61584/duan1_nhom3_app/CartManager.java" beforeDir="false" afterPath="$PROJECT_DIR$/DuAn1Nhom3_app/app/src/main/java/fpl/manhph61584/duan1_nhom3_app/CartManager.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/DuAn1Nhom3_app/app/src/main/java/fpl/manhph61584/duan1_nhom3_app/EditProfileActivity.java" beforeDir="false" afterPath="$PROJECT_DIR$/DuAn1Nhom3_app/app/src/main/java/fpl/manhph61584/duan1_nhom3_app/EditProfileActivity.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/DuAn1Nhom3_app/app/src/main/java/fpl/manhph61584/duan1_nhom3_app/MainActivity.java" beforeDir="false" afterPath="$PROJECT_DIR$/DuAn1Nhom3_app/app/src/main/java/fpl/manhph61584/duan1_nhom3_app/MainActivity.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/DuAn1Nhom3_app/app/src/main/java/fpl/manhph61584/duan1_nhom3_app/OrderStatusActivity.java" beforeDir="false" afterPath="$PROJECT_DIR$/DuAn1Nhom3_app/app/src/main/java/fpl/manhph61584/duan1_nhom3_app/OrderStatusActivity.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/DuAn1Nhom3_app/app/src/main/java/fpl/manhph61584/duan1_nhom3_app/ProfileActivity.java" beforeDir="false" afterPath="$PROJECT_DIR$/DuAn1Nhom3_app/app/src/main/java/fpl/manhph61584/duan1_nhom3_app/ProfileActivity.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/DuAn1Nhom3_app/app/src/main/java/fpl/manhph61584/duan1_nhom3_app/Voucher.java" beforeDir="false" afterPath="$PROJECT_DIR$/DuAn1Nhom3_app/app/src/main/java/fpl/manhph61584/duan1_nhom3_app/Voucher.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/DuAn1Nhom3_app/app/src/main/java/fpl/manhph61584/duan1_nhom3_app/network/dto/AddToCartRequest.java" beforeDir="false" afterPath="$PROJECT_DIR$/DuAn1Nhom3_app/app/src/main/java/fpl/manhph61584/duan1_nhom3_app/network/dto/AddToCartRequest.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/DuAn1Nhom3_app/app/src/main/java/fpl/manhph61584/duan1_nhom3_app/network/dto/CartResponse.java" beforeDir="false" afterPath="$PROJECT_DIR$/DuAn1Nhom3_app/app/src/main/java/fpl/manhph61584/duan1_nhom3_app/network/dto/CartResponse.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/DuAn1Nhom3_app/app/src/main/java/fpl/manhph61584/duan1_nhom3_app/network/dto/UserDto.java" beforeDir="false" afterPath="$PROJECT_DIR$/DuAn1Nhom3_app/app/src/main/java/fpl/manhph61584/duan1_nhom3_app/network/dto/UserDto.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/DuAn1Nhom3_app/app/src/main/res/layout/activity_main.xml" beforeDir="false" afterPath="$PROJECT_DIR$/DuAn1Nhom3_app/app/src/main/res/layout/activity_main.xml" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/DuAn1Nhom3_app/app/src/main/res/layout/activity_profile.xml" beforeDir="false" afterPath="$PROJECT_DIR$/DuAn1Nhom3_app/app/src/main/res/layout/activity_profile.xml" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/DuAn1Nhom3_app/app/src/main/res/layout/item_voucher.xml" beforeDir="false" afterPath="$PROJECT_DIR$/DuAn1Nhom3_app/app/src/main/res/layout/item_voucher.xml" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/DuAn1Nhom3_app/app/src/main/res/layout/row_cart_item.xml" beforeDir="false" afterPath="$PROJECT_DIR$/DuAn1Nhom3_app/app/src/main/res/layout/row_cart_item.xml" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/DuAn1Nhom3_app/app/src/main/res/layout/row_order_status.xml" beforeDir="false" afterPath="$PROJECT_DIR$/DuAn1Nhom3_app/app/src/main/res/layout/row_order_status.xml" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/server/models/User.js" beforeDir="false" afterPath="$PROJECT_DIR$/server/models/User.js" afterDir="false" />
+    </list>
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />
     <option name="HIGHLIGHT_NON_ACTIVE_CHANGELIST" value="false" />
@@ -22,12 +39,12 @@
     &quot;assignee&quot;: &quot;manh-06-10&quot;
   }
 }</component>
-  <component name="GithubPullRequestsUISettings">{
-  &quot;selectedUrlAndAccountId&quot;: {
-    &quot;url&quot;: &quot;https://github.com/manh-06-10/DuAn1-Nhom3-Manh&quot;,
-    &quot;accountId&quot;: &quot;62cd5394-35af-4ea2-949d-9fa5302704bd&quot;
+  <component name="GithubPullRequestsUISettings"><![CDATA[{
+  "selectedUrlAndAccountId": {
+    "url": "https://github.com/manh-06-10/DuAn1-Nhom3-Manh.git",
+    "accountId": "62cd5394-35af-4ea2-949d-9fa5302704bd"
   }
-}</component>
+}]]></component>
   <component name="ProjectColorInfo">{
   &quot;associatedIndex&quot;: 0
 }</component>
@@ -44,7 +61,7 @@
     "RunOnceActivity.readMode.enableVisualFormatting": "true",
     "cf.first.check.clang-format": "false",
     "cidr.known.project.marker": "true",
-    "git-widget-placeholder": "NgocAnh",
+    "git-widget-placeholder": "main",
     "kotlin-language-version-configured": "true",
     "last_opened_file_path": "D:/DuAn1-Nhom3-Manh/DuAn1Nhom3_app"
   }

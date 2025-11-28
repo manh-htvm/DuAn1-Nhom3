@@ -1,4 +1,4 @@
-# DuAn1-Nhom3 - Ứng dụng Mua sắm Quần áo
+# DuAn1-Nhom3 - API Backend cho Ứng dụng Mua sắm Quần áo
 
 ## 🚀 Cài đặt Server
 
@@ -45,25 +45,637 @@ curl http://localhost:3000
 
 ---
 
-## 📱 Cài đặt Android App
+## 📖 Hướng dẫn Test API bằng Postman
 
-### 1. Mở project trong Android Studio
+### 🔐 1. Authentication
 
-- Mở Android Studio
-- Chọn `Open` và chọn thư mục `DuAn1Nhom3_app`
-- Đợi Gradle sync hoàn tất
+#### Đăng ký tài khoản mới
 
-### 2. Cấu hình API URL
+**Request:**
+- **Method:** `POST`
+- **URL:** `http://localhost:3000/api/users/register`
+- **Headers:**
+  ```
+  Content-Type: application/json
+  ```
+- **Body (raw JSON):**
+  ```json
+  {
+    "name": "Nguyễn Văn A",
+    "email": "user@example.com",
+    "password": "password123"
+  }
+  ```
 
-File `ApiClient.java` đã được cấu hình để kết nối với server:
-- **Emulator**: `http://10.0.2.2:3000/api/`
-- **Thiết bị thật**: Thay đổi IP trong `ApiClient.java` thành IP máy tính của bạn
+**Response:**
+```json
+{
+  "message": "Đăng ký thành công",
+  "user": {
+    "id": "...",
+    "name": "Nguyễn Văn A",
+    "email": "user@example.com",
+    "role": "user",
+    "avatar": null
+  }
+}
+```
 
-### 3. Chạy ứng dụng
+**Lưu ý:** User mới đăng ký sẽ tự động nhận voucher giảm giá 50% vĩnh viễn!
 
-- Kết nối thiết bị Android hoặc khởi động emulator
-- Click `Run` trong Android Studio
-- Chọn thiết bị/emulator và đợi app cài đặt
+#### Đăng nhập
+
+**Request:**
+- **Method:** `POST`
+- **URL:** `http://localhost:3000/api/users/login`
+- **Headers:**
+  ```
+  Content-Type: application/json
+  ```
+- **Body (raw JSON):**
+  ```json
+  {
+    "email": "user@example.com",
+    "password": "password123"
+  }
+  ```
+
+**Response:**
+```json
+{
+  "message": "Đăng nhập thành công",
+  "token": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...",
+  "user": {
+    "id": "...",
+    "name": "Nguyễn Văn A",
+    "email": "user@example.com",
+    "role": "user",
+    "avatar": null
+  }
+}
+```
+
+**Lưu token này để dùng cho các API yêu cầu authentication!**
+
+#### Cập nhật Profile (Name và Avatar)
+
+**Request:**
+- **Method:** `PUT`
+- **URL:** `http://localhost:3000/api/users/profile`
+- **Headers:**
+  ```
+  Content-Type: application/json
+  Authorization: Bearer <token>
+  ```
+- **Body (raw JSON):**
+  ```json
+  {
+    "name": "Nguyễn Văn B",
+    "avatar": "/uploads/1234567890-123456789.jpg"
+  }
+  ```
+
+**Response:**
+```json
+{
+  "message": "Cập nhật profile thành công",
+  "user": {
+    "id": "...",
+    "name": "Nguyễn Văn B",
+    "email": "user@example.com",
+    "role": "user",
+    "avatar": "/uploads/1234567890-123456789.jpg"
+  }
+}
+```
+
+---
+
+### 📁 2. Categories
+
+#### Lấy danh sách categories
+
+**Request:**
+- **Method:** `GET`
+- **URL:** `http://localhost:3000/api/categories`
+
+**Response:**
+```json
+[
+  {
+    "_id": "...",
+    "name": "Áo thun",
+    "description": "Các mẫu áo thun",
+    "createdAt": "...",
+    "updatedAt": "..."
+  }
+]
+```
+
+#### Tạo category mới
+
+**Request:**
+- **Method:** `POST`
+- **URL:** `http://localhost:3000/api/categories`
+- **Headers:**
+  ```
+  Content-Type: application/json
+  ```
+- **Body (raw JSON):**
+  ```json
+  {
+    "name": "Áo thun",
+    "description": "Các mẫu áo thun"
+  }
+  ```
+
+**Lưu lại `_id` của category để dùng khi tạo sản phẩm!**
+
+---
+
+### 🛍️ 3. Products
+
+#### Lấy danh sách sản phẩm
+
+**Request:**
+- **Method:** `GET`
+- **URL:** `http://localhost:3000/api/products`
+- **Query Parameters (optional):**
+  - `search`: Tìm kiếm theo tên (ví dụ: `?search=áo`)
+  - `category`: Lọc theo category ID (ví dụ: `?category=6760abc123...`)
+
+**Response:**
+```json
+[
+  {
+    "_id": "...",
+    "name": "Áo thun basic",
+    "description": "Chất cotton 100%",
+    "price": 199000,
+    "stock": 50,
+    "category": "...",
+    "image": "/uploads/1234567890-123456789.jpg",
+    "colors": ["Đỏ", "Đen", "Xanh"],
+    "sizes": ["S", "M", "L", "XL"],
+    "createdAt": "...",
+    "updatedAt": "..."
+  }
+]
+```
+
+#### Lấy chi tiết sản phẩm
+
+**Request:**
+- **Method:** `GET`
+- **URL:** `http://localhost:3000/api/products/:id`
+
+**Response:**
+```json
+{
+  "_id": "...",
+  "name": "Áo thun basic",
+  "description": "Chất cotton 100%",
+  "price": 199000,
+  "stock": 50,
+  "category": "...",
+  "image": "/uploads/1234567890-123456789.jpg",
+  "colors": ["Đỏ", "Đen", "Xanh"],
+  "sizes": ["S", "M", "L", "XL"],
+  "createdAt": "...",
+  "updatedAt": "..."
+}
+```
+
+#### Tạo sản phẩm mới
+
+**Request:**
+- **Method:** `POST`
+- **URL:** `http://localhost:3000/api/products`
+- **Headers:**
+  ```
+  (Không cần Content-Type, Postman sẽ tự động set)
+  ```
+- **Body (form-data):**
+
+| Key | Type | Value |
+|-----|------|-------|
+| image | File | Chọn file ảnh (jpg, png, gif, webp) |
+| name | Text | Áo thun basic |
+| description | Text | Chất cotton 100% |
+| price | Text | 199000 |
+| stock | Text | 50 |
+| category | Text | 6760abc123... (ID của category) |
+| colors | Text | `["Đỏ", "Đen", "Xanh"]` (JSON array string) |
+| sizes | Text | `["S", "M", "L", "XL"]` (JSON array string) |
+
+**Lưu ý:** 
+- `colors` và `sizes` phải là JSON array string, ví dụ: `["Đỏ", "Đen"]`
+- File ảnh tối đa 5MB
+- Chỉ chấp nhận: jpeg, jpg, png, gif, webp
+
+**Response:**
+```json
+{
+  "_id": "...",
+  "name": "Áo thun basic",
+  "description": "Chất cotton 100%",
+  "price": 199000,
+  "stock": 50,
+  "category": "...",
+  "image": "/uploads/1234567890-123456789.jpg",
+  "colors": ["Đỏ", "Đen", "Xanh"],
+  "sizes": ["S", "M", "L", "XL"],
+  "createdAt": "...",
+  "updatedAt": "..."
+}
+```
+
+---
+
+### 🛒 4. Cart (Giỏ hàng)
+
+**Tất cả endpoints yêu cầu authentication: `Authorization: Bearer <token>`**
+
+#### Lấy giỏ hàng
+
+**Request:**
+- **Method:** `GET`
+- **URL:** `http://localhost:3000/api/cart`
+- **Headers:**
+  ```
+  Authorization: Bearer <token>
+  ```
+
+**Response:**
+```json
+{
+  "items": [
+    {
+      "product": {
+        "_id": "...",
+        "name": "Áo thun basic",
+        "price": 199000,
+        "image": "/uploads/..."
+      },
+      "quantity": 2,
+      "color": "Đỏ",
+      "size": "M"
+    }
+  ],
+  "total": 398000
+}
+```
+
+#### Thêm sản phẩm vào giỏ hàng
+
+**Request:**
+- **Method:** `POST`
+- **URL:** `http://localhost:3000/api/cart`
+- **Headers:**
+  ```
+  Content-Type: application/json
+  Authorization: Bearer <token>
+  ```
+- **Body (raw JSON):**
+  ```json
+  {
+    "productId": "product_id_here",
+    "quantity": 2,
+    "color": "Đỏ",
+    "size": "M"
+  }
+  ```
+
+**Response:**
+```json
+{
+  "message": "Đã thêm vào giỏ hàng",
+  "cart": {
+    "items": [...],
+    "total": 398000
+  }
+}
+```
+
+#### Cập nhật số lượng sản phẩm
+
+**Request:**
+- **Method:** `PUT`
+- **URL:** `http://localhost:3000/api/cart/:productId`
+- **Headers:**
+  ```
+  Content-Type: application/json
+  Authorization: Bearer <token>
+  ```
+- **Body (raw JSON):**
+  ```json
+  {
+    "quantity": 3
+  }
+  ```
+
+#### Xóa sản phẩm khỏi giỏ hàng
+
+**Request:**
+- **Method:** `DELETE`
+- **URL:** `http://localhost:3000/api/cart/:productId`
+- **Headers:**
+  ```
+  Authorization: Bearer <token>
+  ```
+
+---
+
+### ⭐ 5. Reviews (Đánh giá)
+
+#### Lấy reviews của sản phẩm
+
+**Request:**
+- **Method:** `GET`
+- **URL:** `http://localhost:3000/api/reviews/product/:productId`
+
+**Response:**
+```json
+[
+  {
+    "_id": "...",
+    "product": "...",
+    "user": {
+      "id": "...",
+      "name": "Nguyễn Văn A",
+      "email": "user@example.com"
+    },
+    "rating": 5,
+    "comment": "Sản phẩm rất tốt!",
+    "adminReply": null,
+    "createdAt": "..."
+  }
+]
+```
+
+#### Lấy rating trung bình
+
+**Request:**
+- **Method:** `GET`
+- **URL:** `http://localhost:3000/api/reviews/product/:productId/rating`
+
+**Response:**
+```json
+{
+  "averageRating": 4.5,
+  "totalReviews": 10
+}
+```
+
+#### Tạo review mới
+
+**Request:**
+- **Method:** `POST`
+- **URL:** `http://localhost:3000/api/reviews`
+- **Headers:**
+  ```
+  Content-Type: application/json
+  Authorization: Bearer <token>
+  ```
+- **Body (raw JSON):**
+  ```json
+  {
+    "productId": "product_id",
+    "rating": 5,
+    "comment": "Sản phẩm rất tốt!"
+  }
+  ```
+
+**Lưu ý:** `comment` có thể để trống (optional)
+
+---
+
+### 🎫 6. Vouchers
+
+#### Lấy danh sách vouchers
+
+**Request:**
+- **Method:** `GET`
+- **URL:** `http://localhost:3000/api/vouchers`
+- **Headers (optional):**
+  ```
+  Authorization: Bearer <token>
+  ```
+
+**Lưu ý:**
+- Nếu có token: Lấy cả vouchers của user và vouchers public
+- Nếu không có token: Chỉ lấy vouchers public
+
+**Response:**
+```json
+[
+  {
+    "_id": "...",
+    "code": "WELCOME1234",
+    "name": "Voucher chào mừng",
+    "description": "Giảm 50% cho khách hàng mới",
+    "discountType": "percentage",
+    "discountValue": 50,
+    "minPurchaseAmount": 0,
+    "maxDiscountAmount": null,
+    "startDate": "...",
+    "endDate": "...",
+    "usageLimit": null,
+    "usedCount": 0,
+    "isActive": true,
+    "user": "..." // null = public, có giá trị = voucher cho user cụ thể
+  }
+]
+```
+
+#### Lấy vouchers public
+
+**Request:**
+- **Method:** `GET`
+- **URL:** `http://localhost:3000/api/vouchers/public`
+
+#### Tạo voucher mới (Admin only)
+
+**Request:**
+- **Method:** `POST`
+- **URL:** `http://localhost:3000/api/vouchers`
+- **Headers:**
+  ```
+  Content-Type: application/json
+  Authorization: Bearer <admin_token>
+  ```
+- **Body (raw JSON):**
+  ```json
+  {
+    "code": "SALE50",
+    "name": "Giảm giá 50%",
+    "description": "Giảm 50% cho đơn hàng từ 500k, tối đa 200k",
+    "discountType": "percentage",
+    "discountValue": 50,
+    "minPurchaseAmount": 500000,
+    "maxDiscountAmount": 200000,
+    "startDate": "2024-01-01T00:00:00.000Z",
+    "endDate": "2024-12-31T23:59:59.999Z",
+    "usageLimit": 100,
+    "userId": null
+  }
+  ```
+
+**Voucher types:**
+- `discountType`: `"percentage"` hoặc `"fixed"`
+- `percentage`: Giảm theo phần trăm (ví dụ: 50 = 50%)
+- `fixed`: Giảm số tiền cố định (ví dụ: 50000 = 50,000₫)
+- `userId`: `null` = voucher public, có giá trị = voucher cho user cụ thể
+
+**Ví dụ voucher giảm 50%, tối đa 200k, cho đơn hàng từ 500k:**
+```json
+{
+  "code": "SALE50",
+  "name": "Giảm giá 50%",
+  "description": "Giảm 50% cho đơn hàng từ 500k, tối đa 200k",
+  "discountType": "percentage",
+  "discountValue": 50,
+  "minPurchaseAmount": 500000,
+  "maxDiscountAmount": 200000,
+  "startDate": "2024-01-01T00:00:00.000Z",
+  "endDate": "2024-12-31T23:59:59.999Z",
+  "usageLimit": null,
+  "userId": null
+}
+```
+
+---
+
+### 📤 7. Upload Ảnh
+
+#### Upload một ảnh
+
+**Request:**
+- **Method:** `POST`
+- **URL:** `http://localhost:3000/api/upload`
+- **Body (form-data):**
+
+| Key | Type | Value |
+|-----|------|-------|
+| image | File | Chọn file ảnh (jpg, png, gif, webp) |
+
+**Lưu ý:**
+- File tối đa 5MB
+- Chỉ chấp nhận: jpeg, jpg, png, gif, webp
+
+**Response:**
+```json
+{
+  "message": "Upload ảnh thành công",
+  "filename": "1234567890-123456789.jpg",
+  "path": "/uploads/1234567890-123456789.jpg",
+  "size": 123456
+}
+```
+
+**Sử dụng `path` để lưu vào profile hoặc sản phẩm!**
+
+#### Upload nhiều ảnh
+
+**Request:**
+- **Method:** `POST`
+- **URL:** `http://localhost:3000/api/upload/multiple`
+- **Body (form-data):**
+
+| Key | Type | Value |
+|-----|------|-------|
+| images | File | Chọn nhiều file ảnh (tối đa 10) |
+
+**Response:**
+```json
+{
+  "message": "Upload 2 ảnh thành công",
+  "files": [
+    {
+      "filename": "1234567890-123456789.jpg",
+      "path": "/uploads/1234567890-123456789.jpg",
+      "size": 123456
+    },
+    {
+      "filename": "1234567891-123456790.png",
+      "path": "/uploads/1234567891-123456790.png",
+      "size": 234567
+    }
+  ]
+}
+```
+
+---
+
+## 📝 Ghi chú quan trọng
+
+### Voucher tự động khi đăng ký
+
+- Mỗi user mới đăng ký sẽ tự động nhận một voucher:
+  - Code: `WELCOME` + 8 ký tự đầu của user ID
+  - Giảm giá: 50%
+  - Thời hạn: Vĩnh viễn (đến 31/12/2099)
+  - Không giới hạn lượt sử dụng
+  - Chỉ dành cho user đó
+
+### Colors và Sizes
+
+- Màu sắc và size của sản phẩm được lưu trong database
+- Khi tạo sản phẩm, cần gửi `colors` và `sizes` dưới dạng JSON array string
+- Ví dụ: `["Đỏ", "Đen", "Xanh"]` hoặc `["S", "M", "L"]`
+
+### Authentication
+
+- Hầu hết các API cần authentication (trừ đăng ký, đăng nhập, xem sản phẩm)
+- Sử dụng JWT token trong header: `Authorization: Bearer <token>`
+- Token có thời hạn 1 giờ
+- Lấy token từ response khi đăng nhập
+
+### Cách sử dụng Token trong Postman
+
+1. Sau khi đăng nhập, copy token từ response
+2. Vào tab **Authorization** trong Postman
+3. Chọn type: **Bearer Token**
+4. Paste token vào ô **Token**
+5. Hoặc thêm header thủ công: `Authorization: Bearer <token>`
+
+---
+
+## 🔧 Troubleshooting
+
+### Server không kết nối được MongoDB
+
+**Lỗi:** `Không thể kết nối MongoDB`
+
+**Giải pháp:**
+1. Kiểm tra MongoDB có đang chạy không
+2. Kiểm tra `MONGODB_URI` trong file `.env`
+3. Thử kết nối bằng MongoDB Compass
+
+### Token không hợp lệ
+
+**Lỗi:** `Token không hợp lệ` hoặc `401 Unauthorized`
+
+**Giải pháp:**
+1. Kiểm tra token có đúng format: `Bearer <token>`
+2. Token có thể đã hết hạn (1 giờ), đăng nhập lại để lấy token mới
+3. Kiểm tra header `Authorization` có đúng không
+
+### Upload ảnh bị lỗi
+
+**Lỗi:** `Chỉ cho phép upload file ảnh`
+
+**Giải pháp:**
+1. Kiểm tra file có đúng định dạng: jpeg, jpg, png, gif, webp
+2. Kiểm tra file size < 5MB
+3. Trong Postman, chọn **form-data** và chọn type **File** cho field `image`
+
+### Ảnh không hiển thị
+
+**Giải pháp:**
+1. Kiểm tra server có chạy không
+2. Kiểm tra file ảnh có tồn tại trong `server/uploads/`
+3. Truy cập trực tiếp: `http://localhost:3000/uploads/filename.jpg`
 
 ---
 
@@ -91,425 +703,23 @@ DuAn1-Nhom3-Manh/
 │   │   ├── cart.js
 │   │   ├── orders.js
 │   │   ├── reviews.js
-│   │   └── vouchers.js
+│   │   ├── vouchers.js
+│   │   └── upload.js
+│   ├── uploads/              # Thư mục lưu ảnh
 │   └── server.js             # Entry point
-│
-└── DuAn1Nhom3_app/           # Android app
-    └── app/
-        └── src/
-            └── main/
-                ├── java/
-                │   └── fpl/manhph61584/duan1_nhom3_app/
-                │       ├── network/         # API client
-                │       ├── activities/      # Activities
-                │       └── ...
-                └── res/                     # Resources
 ```
 
 ---
 
-## 🔌 API Endpoints
-
-### Authentication (`/api/users`)
-
-#### Đăng ký
-```http
-POST /api/users/register
-Content-Type: application/json
-
-{
-  "name": "Nguyễn Văn A",
-  "email": "user@example.com",
-  "password": "password123"
-}
-```
-
-**Lưu ý**: Khi đăng ký thành công, user sẽ tự động nhận một voucher giảm giá 50% vĩnh viễn!
-
-#### Đăng nhập
-```http
-POST /api/users/login
-Content-Type: application/json
-
-{
-  "email": "user@example.com",
-  "password": "password123"
-}
-```
-
-Response:
-```json
-{
-  "message": "Đăng nhập thành công",
-  "token": "jwt_token_here",
-  "user": {
-    "id": "...",
-    "name": "Nguyễn Văn A",
-    "email": "user@example.com",
-    "role": "user"
-  }
-}
-```
-
----
-
-### Categories (`/api/categories`)
-
-#### Lấy danh sách categories
-```http
-GET /api/categories
-```
-
-#### Tạo category mới
-```http
-POST /api/categories
-Content-Type: application/json
-
-{
-  "name": "Áo thun",
-  "description": "Các mẫu áo thun"
-}
-```
-
----
-
-### Products (`/api/products`)
-
-#### Lấy danh sách sản phẩm
-```http
-GET /api/products?search=áo&category=category_id
-```
-
-Query parameters:
-- `search` (optional): Tìm kiếm theo tên
-- `category` (optional): Lọc theo category ID
-
-#### Lấy chi tiết sản phẩm
-```http
-GET /api/products/:id
-```
-
-#### Tạo sản phẩm mới (form-data)
-```http
-POST /api/products
-Content-Type: multipart/form-data
-
-Form fields:
-- image: File (ảnh sản phẩm)
-- name: Text
-- description: Text
-- price: Text (số)
-- stock: Text (số)
-- category: Text (_id của category)
-- colors: Text (JSON array, ví dụ: ["Đỏ", "Đen", "Xanh"])
-- sizes: Text (JSON array, ví dụ: ["S", "M", "L"])
-```
-
-**Ví dụ với Postman:**
-| Key | Type | Value |
-|-----|------|-------|
-| image | File | product.jpg |
-| name | Text | Áo thun basic |
-| description | Text | Chất cotton 100% |
-| price | Text | 199000 |
-| stock | Text | 50 |
-| category | Text | 6760abc123... |
-| colors | Text | ["Đỏ", "Đen", "Xanh"] |
-| sizes | Text | ["S", "M", "L", "XL"] |
-
----
-
-### Cart (`/api/cart`)
-
-**Tất cả endpoints yêu cầu authentication: `Authorization: Bearer <token>`**
-
-#### Lấy giỏ hàng
-```http
-GET /api/cart
-Authorization: Bearer <token>
-```
-
-#### Thêm sản phẩm vào giỏ hàng
-```http
-POST /api/cart
-Authorization: Bearer <token>
-Content-Type: application/json
-
-{
-  "productId": "product_id_here",
-  "quantity": 2,
-  "color": "Đỏ",
-  "size": "M"
-}
-```
-
-#### Cập nhật số lượng
-```http
-PUT /api/cart/:productId
-Authorization: Bearer <token>
-Content-Type: application/json
-
-{
-  "quantity": 3
-}
-```
-
-#### Xóa sản phẩm khỏi giỏ hàng
-```http
-DELETE /api/cart/:productId
-Authorization: Bearer <token>
-```
-
----
-
-### Reviews (`/api/reviews`)
-
-#### Lấy reviews của sản phẩm
-```http
-GET /api/reviews/product/:productId
-```
-
-#### Lấy rating trung bình
-```http
-GET /api/reviews/product/:productId/rating
-```
-
-#### Tạo review mới
-```http
-POST /api/reviews
-Authorization: Bearer <token>
-Content-Type: application/json
-
-{
-  "productId": "product_id",
-  "rating": 5,
-  "comment": "Sản phẩm rất tốt!"
-}
-```
-
----
-
-### Vouchers (`/api/vouchers`)
-
-#### Lấy danh sách vouchers
-- **Đã đăng nhập**: Lấy cả vouchers của user và vouchers public
-- **Chưa đăng nhập**: Chỉ lấy vouchers public
-
-```http
-GET /api/vouchers
-Authorization: Bearer <token>  # Optional
-```
-
-#### Lấy vouchers public
-```http
-GET /api/vouchers/public
-```
-
-#### Admin tạo voucher mới
-```http
-POST /api/vouchers
-Authorization: Bearer <admin_token>
-Content-Type: application/json
-
-{
-  "code": "SALE50",
-  "name": "Giảm giá 50%",
-  "description": "Giảm 50% cho đơn hàng từ 500k",
-  "discountType": "percentage",
-  "discountValue": 50,
-  "minPurchaseAmount": 500000,
-  "maxDiscountAmount": 200000,
-  "startDate": "2024-01-01T00:00:00.000Z",
-  "endDate": "2024-12-31T23:59:59.999Z",
-  "usageLimit": 100,
-  "userId": null  // null = public, có giá trị = voucher cho user cụ thể
-}
-```
-
-**Voucher types:**
-- `discountType`: `"percentage"` hoặc `"fixed"`
-- `percentage`: Giảm theo phần trăm (ví dụ: 50 = 50%)
-- `fixed`: Giảm số tiền cố định (ví dụ: 50000 = 50,000₫)
-
----
-
-## ✨ Tính năng
-
-### User Features
-- ✅ Đăng ký/Đăng nhập
-- ✅ Xem danh sách sản phẩm
-- ✅ Tìm kiếm sản phẩm
-- ✅ Lọc sản phẩm theo category
-- ✅ Xem chi tiết sản phẩm (hình ảnh, mô tả, giá, màu sắc, size)
-- ✅ Thêm sản phẩm vào giỏ hàng (lưu trên server MongoDB)
-- ✅ Xem giỏ hàng
-- ✅ Chọn voucher giảm giá
-- ✅ Nhập thông tin đặt hàng (số điện thoại, địa chỉ, ghi chú)
-- ✅ Đánh giá sản phẩm
-- ✅ Xem lịch sử đơn hàng (trang cá nhân)
-- ✅ Trang cá nhân với thông tin user
-
-### Voucher System
-- ✅ User mới đăng ký tự động nhận voucher 50% vĩnh viễn
-- ✅ Admin có thể tạo vouchers public hoặc cho user cụ thể
-- ✅ Hỗ trợ 2 loại giảm giá: percentage và fixed amount
-- ✅ Tự động tính toán giảm giá trong giỏ hàng
-
-### Product Features
-- ✅ Sản phẩm có thể có nhiều màu sắc và size
-- ✅ Màu sắc và size được lưu trên server (không hardcode)
-- ✅ Tìm kiếm và lọc theo category
-
----
-
-## 📖 Hướng dẫn sử dụng
-
-### 1. Tạo tài khoản
-
-1. Mở ứng dụng Android
-2. Click "Đăng ký"
-3. Nhập thông tin: Họ tên, Email, Mật khẩu
-4. Click "Đăng ký"
-
-**Lưu ý**: Bạn sẽ tự động nhận voucher giảm giá 50% vĩnh viễn!
-
-### 2. Tạo danh mục sản phẩm
-
-Sử dụng Postman hoặc curl:
-
-```bash
-curl -X POST http://localhost:3000/api/categories \
-  -H "Content-Type: application/json" \
-  -d '{
-    "name": "Áo thun",
-    "description": "Các mẫu áo thun"
-  }'
-```
-
-Lưu lại `_id` của category để dùng khi tạo sản phẩm.
-
-### 3. Thêm sản phẩm
-
-Sử dụng Postman với form-data:
-
-1. Method: `POST`
-2. URL: `http://localhost:3000/api/products`
-3. Body type: `form-data`
-4. Thêm các fields:
-   - `image`: Chọn file ảnh
-   - `name`: Tên sản phẩm
-   - `description`: Mô tả
-   - `price`: Giá
-   - `stock`: Số lượng tồn kho
-   - `category`: ID của category
-   - `colors`: JSON array `["Đỏ", "Đen", "Xanh"]`
-   - `sizes`: JSON array `["S", "M", "L"]`
-
-### 4. Mua sắm
-
-1. Đăng nhập vào ứng dụng
-2. Duyệt sản phẩm trên trang chủ
-3. Click vào category để lọc sản phẩm
-4. Click vào sản phẩm để xem chi tiết
-5. Chọn màu, size, số lượng
-6. Click "Thêm vào giỏ hàng"
-7. Sản phẩm sẽ được lưu vào giỏ hàng trên server
-
-### 5. Thanh toán
-
-1. Vào giỏ hàng
-2. Xem danh sách sản phẩm
-3. Chọn voucher (nếu có)
-4. Nhập số điện thoại và địa chỉ (bắt buộc)
-5. Nhập ghi chú (tùy chọn)
-6. Xem tổng tiền (đã trừ giảm giá nếu có voucher)
-7. Click "Thanh toán"
-
-### 6. Tạo voucher (Admin)
-
-1. Đăng nhập với tài khoản admin
-2. Sử dụng API POST `/api/vouchers` với token admin
-3. Tạo voucher public hoặc cho user cụ thể
-
-**Ví dụ voucher giảm 50%, tối đa 200k, cho đơn hàng từ 500k:**
-```json
-{
-  "code": "SALE50",
-  "name": "Giảm giá 50%",
-  "description": "Giảm 50% cho đơn hàng từ 500k, tối đa 200k",
-  "discountType": "percentage",
-  "discountValue": 50,
-  "minPurchaseAmount": 500000,
-  "maxDiscountAmount": 200000,
-  "startDate": "2024-01-01T00:00:00.000Z",
-  "endDate": "2024-12-31T23:59:59.999Z",
-  "usageLimit": null,
-  "userId": null
-}
-```
-
----
-
-## 🔧 Troubleshooting
-
-### Server không kết nối được MongoDB
-
-**Lỗi**: `Không thể kết nối MongoDB`
-
-**Giải pháp**:
-1. Kiểm tra MongoDB có đang chạy không
-2. Kiểm tra `MONGODB_URI` trong file `.env`
-3. Thử kết nối bằng MongoDB Compass
-
-### Android app không kết nối được server
-
-**Lỗi**: `Lỗi kết nối` trong app
-
-**Giải pháp**:
-1. **Emulator**: Đảm bảo dùng `http://10.0.2.2:3000`
-2. **Thiết bị thật**: 
-   - Đảm bảo điện thoại và máy tính cùng mạng WiFi
-   - Tìm IP máy tính: `ipconfig` (Windows) hoặc `ifconfig` (Linux/Mac)
-   - Cập nhật IP trong `ApiClient.java`
-   - Đảm bảo firewall không chặn port 3000
-
-### Voucher không hiển thị
-
-**Giải pháp**:
-1. Kiểm tra user đã đăng nhập chưa
-2. Kiểm tra voucher có `isActive: true`
-3. Kiểm tra ngày hiện tại trong khoảng `startDate` và `endDate`
-4. Kiểm tra voucher có còn lượt sử dụng không (nếu có `usageLimit`)
-
-### Ảnh sản phẩm không hiển thị
-
-**Giải pháp**:
-1. Kiểm tra server có chạy không
-2. Kiểm tra file ảnh có tồn tại trong `server/uploads/`
-3. Kiểm tra URL ảnh trong response API
-4. Emulator: Đảm bảo dùng `http://10.0.2.2:3000/uploads/...`
-
----
-
-## 📝 Ghi chú quan trọng
-
-### Voucher tự động khi đăng ký
-
-- Mỗi user mới đăng ký sẽ tự động nhận một voucher:
-  - Code: `WELCOME` + 8 ký tự đầu của user ID
-  - Giảm giá: 50%
-  - Thời hạn: Vĩnh viễn (đến 31/12/2099)
-  - Không giới hạn lượt sử dụng
-  - Chỉ dành cho user đó
-
-### Colors và Sizes
-
-- Màu sắc và size của sản phẩm được lưu trong database
-- Khi tạo sản phẩm, cần gửi `colors` và `sizes` dưới dạng JSON array string
-- Android app sẽ tự động hiển thị từ API
-
-### Authentication
-
-- Hầu hết các API cần authentication (trừ đăng ký, đăng nhập, xem sản phẩm)
-- Sử dụng JWT token trong header: `Authorization: Bearer <token>`
-- Token có thời hạn 1 giờ
+## 🎯 Quy trình test cơ bản
+
+1. **Đăng ký tài khoản mới** → Lưu user ID
+2. **Đăng nhập** → Lưu token
+3. **Tạo category** → Lưu category ID
+4. **Upload ảnh** → Lưu path
+5. **Tạo sản phẩm** (dùng category ID và image path) → Lưu product ID
+6. **Thêm vào giỏ hàng** (dùng product ID và token)
+7. **Xem giỏ hàng** (dùng token)
+8. **Tạo review** (dùng product ID và token)
+9. **Xem reviews** (dùng product ID)
+10. **Tạo voucher** (nếu là admin)

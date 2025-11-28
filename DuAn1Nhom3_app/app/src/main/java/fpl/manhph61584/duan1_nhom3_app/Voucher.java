@@ -121,7 +121,9 @@ public class Voucher {
 
     // Helper method để tính số tiền giảm giá
     public double calculateDiscount(double totalAmount) {
-        if (totalAmount < minPurchaseAmount) {
+        // Nếu minPurchaseAmount = 0 hoặc null, áp dụng ngay
+        // Nếu minPurchaseAmount > 0, chỉ áp dụng khi đơn hàng >= minPurchaseAmount
+        if (minPurchaseAmount > 0 && totalAmount < minPurchaseAmount) {
             return 0;
         }
 
@@ -139,7 +141,15 @@ public class Voucher {
         }
         return discount;
     }
+    
+    // Kiểm tra voucher có thể áp dụng cho đơn hàng này không
+    public boolean canApply(double totalAmount) {
+        return minPurchaseAmount == 0 || totalAmount >= minPurchaseAmount;
+    }
 }
+
+
+
 
 
 
