@@ -8,6 +8,8 @@ public class Product {
     private Category category;   // <-- QUAN TRỌNG!
     private int stock;
     private String image;
+    private String[] colors;
+    private String[] sizes;
     private String createdAt;
     private String updatedAt;
 
@@ -37,4 +39,10 @@ public class Product {
 
     public String getUpdatedAt() { return updatedAt; }
     public void setUpdatedAt(String updatedAt) { this.updatedAt = updatedAt; }
+
+    public String[] getColors() { return colors; }
+    public void setColors(String[] colors) { this.colors = colors; }
+
+    public String[] getSizes() { return sizes; }
+    public void setSizes(String[] sizes) { this.sizes = sizes; }
 }

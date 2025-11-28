@@ -36,7 +36,41 @@ const upload = multer({
 router.post("/", upload.single("image"), async (req, res) => {
   try {
     const imagePath = req.file ? `/uploads/${req.file.filename}` : req.body.image;
-    const { name, description, price, stock, category } = req.body;
+    const { name, description, price, stock, category, colors, sizes } = req.body;
+
+    // Parse colors và sizes thành mảng
+    let colorsArray = [];
+    let sizesArray = [];
+
+    if (colors) {
+      if (typeof colors === 'string') {
+        // Nếu là string JSON, parse nó
+        try {
+          colorsArray = JSON.parse(colors);
+        } catch (e) {
+          // Nếu không phải JSON, coi như là một giá trị đơn
+          colorsArray = [colors];
+        }
+      } else if (Array.isArray(colors)) {
+        colorsArray = colors;
+      }
+      // Lọc bỏ giá trị rỗng
+      colorsArray = colorsArray.filter(c => c && c.trim() !== '');
+    }
+
+    if (sizes) {
+      if (typeof sizes === 'string') {
+        try {
+          sizesArray = JSON.parse(sizes);
+        } catch (e) {
+          sizesArray = [sizes];
+        }
+      } else if (Array.isArray(sizes)) {
+        sizesArray = sizes;
+      }
+      // Lọc bỏ giá trị rỗng
+      sizesArray = sizesArray.filter(s => s && s.trim() !== '');
+    }
 
     const product = await Product.create({
       name,
@@ -45,6 +79,8 @@ router.post("/", upload.single("image"), async (req, res) => {
       stock: Number(stock),
       category,
       image: imagePath,
+      colors: colorsArray,
+      sizes: sizesArray,
     });
     res.status(201).json(product);
   } catch (err) {
@@ -55,8 +91,17 @@ router.post("/", upload.single("image"), async (req, res) => {
 // Lấy danh sách sản phẩm
 router.get("/", async (req, res) => {
   try {
-    const { search } = req.query;
-    const query = search ? { name: { $regex: search, $options: "i" } } : {};
+    const { search, category } = req.query;
+    const query = {};
+    
+    if (search) {
+      query.name = { $regex: search, $options: "i" };
+    }
+    
+    if (category) {
+      query.category = category;
+    }
+    
     const products = await Product.find(query).populate("category");
     res.json(products);
   } catch (err) {

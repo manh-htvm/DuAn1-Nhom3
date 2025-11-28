@@ -10,6 +10,8 @@ const productSchema = new mongoose.Schema({
   category: { type: mongoose.Schema.Types.ObjectId, ref: "Category", required: true },
   stock: { type: Number, required: true, min: 0, default: 0 },
   image: { type: String },
+  colors: { type: [String], default: [] },
+  sizes: { type: [String], default: [] },
   createdAt: { type: Date, default: Date.now },
   updatedAt: { type: Date, default: Date.now }
 });
