@@ -40,6 +40,12 @@
         <activity
             android:name=".DetailProductActivity"
             android:exported="false" />
+        <activity
+            android:name=".OrderManagementActivity"
+            android:exported="false" />
+        <activity
+            android:name=".PromotionManagementActivity"
+            android:exported="false" />
     </application>
 
 </manifest>
