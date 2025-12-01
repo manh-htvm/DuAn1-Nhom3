@@ -5,7 +5,6 @@
     android:orientation="vertical"
     android:background="#F5F5F5">
 
-    <!-- Header -->
     <LinearLayout
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
@@ -22,7 +21,7 @@
             android:src="@android:drawable/ic_menu_revert"
             android:clickable="true"
             android:focusable="true"
-            android:padding="4dp"/>
+            android:padding="4dp" />
 
         <TextView
             android:layout_width="0dp"
@@ -33,10 +32,9 @@
             android:textSize="18sp"
             android:textColor="#FFFFFF"
             android:gravity="center_vertical"
-            android:layout_marginStart="16dp"/>
+            android:layout_marginStart="16dp" />
     </LinearLayout>
 
-    <!-- Tabs -->
     <LinearLayout
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
@@ -57,60 +55,71 @@
             android:padding="16dp"
             android:clickable="true"
             android:focusable="true"
-            android:background="?android:attr/selectableItemBackground"/>
+            android:background="?android:attr/selectableItemBackground" />
 
         <TextView
             android:id="@+id/tabPending"
             android:layout_width="0dp"
             android:layout_height="wrap_content"
             android:layout_weight="1"
-            android:text="Nhận"
+            android:text="Chờ xác nhận"
             android:textSize="16sp"
             android:textColor="#666666"
             android:gravity="center"
             android:padding="16dp"
             android:clickable="true"
             android:focusable="true"
-            android:background="?android:attr/selectableItemBackground"/>
+            android:background="?android:attr/selectableItemBackground" />
 
         <TextView
             android:id="@+id/tabProcessing"
             android:layout_width="0dp"
             android:layout_height="wrap_content"
             android:layout_weight="1"
-            android:text="Chờ Vận chuyển"
+            android:text="Đang vận chuyển"
             android:textSize="16sp"
             android:textColor="#666666"
             android:gravity="center"
             android:padding="16dp"
             android:clickable="true"
             android:focusable="true"
-            android:background="?android:attr/selectableItemBackground"/>
+            android:background="?android:attr/selectableItemBackground" />
 
         <TextView
             android:id="@+id/tabShipped"
             android:layout_width="0dp"
             android:layout_height="wrap_content"
             android:layout_weight="1"
-            android:text="Đã vận chuyển"
+            android:text="Hoàn thành"
             android:textSize="16sp"
             android:textColor="#666666"
             android:gravity="center"
             android:padding="16dp"
             android:clickable="true"
             android:focusable="true"
-            android:background="?android:attr/selectableItemBackground"/>
+            android:background="?android:attr/selectableItemBackground" />
+        <TextView
+            android:id="@+id/tabHuy"
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_weight="1"
+            android:text="Huỷ"
+            android:textSize="16sp"
+            android:textColor="#666666"
+            android:gravity="center"
+            android:padding="16dp"
+            android:clickable="true"
+            android:focusable="true"
+            android:background="?android:attr/selectableItemBackground" />
     </LinearLayout>
 
-    <!-- Order List -->
     <androidx.recyclerview.widget.RecyclerView
         android:id="@+id/recyclerViewOrders"
         android:layout_width="match_parent"
         android:layout_height="0dp"
         android:layout_weight="1"
-        android:padding="8dp"/>
+        android:padding="8dp" />
 
-    <!-- Empty State -->
     <TextView
         android:id="@+id/txtEmptyOrders"
         android:layout_width="match_parent"
@@ -120,10 +129,6 @@
         android:textColor="#999999"
         android:gravity="center"
         android:padding="40dp"
-        android:visibility="gone"/>
+        android:visibility="gone" />
 
 </LinearLayout>
-
-
-
-

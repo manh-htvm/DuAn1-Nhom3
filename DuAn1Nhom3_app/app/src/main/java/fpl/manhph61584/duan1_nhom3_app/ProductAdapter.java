@@ -40,7 +40,7 @@ public class ProductAdapter extends RecyclerView.Adapter<ProductAdapter.ProductV
         Product p = list.get(position);
         holder.txtName.setText(p.getName());
         holder.txtPrice.setText(p.getPrice() + "₫");
-        holder.txtSold.setText(p.getStock() + " đã bán");
+        holder.txtSold.setText(p.getSold() + " đã bán");
 
         String imageUrl = p.getImage();
         if (imageUrl != null && imageUrl.startsWith("/uploads/")) {
