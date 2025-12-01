@@ -65,7 +65,14 @@ public class LoginActivity extends AppCompatActivity {
                     LoginResponse body = response.body();
                     UserManager.saveSession(body.getUser(), body.getToken());
                     Toast.makeText(LoginActivity.this, "Đăng nhập thành công!", Toast.LENGTH_SHORT).show();
-                    Intent intent = new Intent(LoginActivity.this, MainActivity.class);
+                    
+                    // Kiểm tra nếu user là admin thì chuyển đến AdminActivity
+                    Intent intent;
+                    if (body.getUser() != null && "admin".equals(body.getUser().getRole())) {
+                        intent = new Intent(LoginActivity.this, AdminActivity.class);
+                    } else {
+                        intent = new Intent(LoginActivity.this, MainActivity.class);
+                    }
                     startActivity(intent);
                     overridePendingTransition(R.anim.slide_in_left, R.anim.slide_out_right);
                     finish();

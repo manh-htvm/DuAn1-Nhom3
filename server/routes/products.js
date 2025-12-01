@@ -2,6 +2,7 @@ const express = require("express");
 const multer = require("multer");
 const path = require("path");
 const Product = require("../models/Product");
+const { verifyToken, requireAdmin } = require("../middleware/auth");
 
 const router = express.Router();
 
@@ -33,7 +34,7 @@ const upload = multer({
   fileFilter,
 });
 
-router.post("/", upload.single("image"), async (req, res) => {
+router.post("/", verifyToken, requireAdmin, upload.single("image"), async (req, res) => {
   try {
     const imagePath = req.file ? `/uploads/${req.file.filename}` : req.body.image;
     const { name, description, price, stock, category, colors, sizes } = req.body;
@@ -72,15 +73,31 @@ router.post("/", upload.single("image"), async (req, res) => {
       sizesArray = sizesArray.filter(s => s && s.trim() !== '');
     }
 
+    // Parse variants nếu có
+    let variantsArray = [];
+    if (req.body.variants) {
+      try {
+        if (typeof req.body.variants === 'string') {
+          variantsArray = JSON.parse(req.body.variants);
+        } else if (Array.isArray(req.body.variants)) {
+          variantsArray = req.body.variants;
+        }
+      } catch (e) {
+        // Nếu không parse được, bỏ qua
+      }
+    }
+
     const product = await Product.create({
       name,
       description,
       price: Number(price),
       stock: Number(stock),
+      sold: Number(req.body.sold || 0),
       category,
       image: imagePath,
       colors: colorsArray,
       sizes: sizesArray,
+      variants: variantsArray,
     });
     res.status(201).json(product);
   } catch (err) {
@@ -126,6 +143,54 @@ router.get("/:id", async (req, res) => {
     const product = await Product.findById(req.params.id).populate("category");
     if (!product) return res.status(404).json({ message: "Không tìm thấy sản phẩm" });
     res.json(product);
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// Lấy số lượng tồn kho theo màu và size
+// GET /api/products/:id/stock?color=Đỏ&size=M
+// Nếu không có color và size: trả về tổng stock
+router.get("/:id/stock", async (req, res) => {
+  try {
+    const { color, size } = req.query;
+    const product = await Product.findById(req.params.id);
+    
+    if (!product) {
+      return res.status(404).json({ message: "Không tìm thấy sản phẩm" });
+    }
+
+    // Nếu không có color và size, trả về tổng stock
+    if (!color && !size) {
+      return res.json({ 
+        stock: product.stock || 0,
+        totalStock: product.stock || 0
+      });
+    }
+
+    // Tìm variant theo color và size
+    const normalizedColor = color || "Mặc định";
+    const normalizedSize = size || "Free size";
+    
+    const variant = product.variants?.find(
+      v => v.color === normalizedColor && v.size === normalizedSize
+    );
+
+    if (variant) {
+      return res.json({ 
+        stock: variant.stock || 0,
+        sold: variant.sold || 0,
+        color: variant.color,
+        size: variant.size
+      });
+    }
+
+    // Nếu không tìm thấy variant, trả về 0
+    return res.json({ 
+      stock: 0,
+      color: normalizedColor,
+      size: normalizedSize
+    });
   } catch (err) {
     res.status(500).json({ error: err.message });
   }

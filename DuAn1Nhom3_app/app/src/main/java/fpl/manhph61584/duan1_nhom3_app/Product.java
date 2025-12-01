@@ -7,6 +7,7 @@ public class Product {
     private double price;
     private Category category;   // <-- QUAN TRỌNG!
     private int stock;
+    private int sold; // Số lượng đã bán
     private String image;
     private String[] colors;
     private String[] sizes;
@@ -30,6 +31,9 @@ public class Product {
 
     public int getStock() { return stock; }
     public void setStock(int stock) { this.stock = stock; }
+
+    public int getSold() { return sold; }
+    public void setSold(int sold) { this.sold = sold; }
 
     public String getImage() { return image; }
     public void setImage(String image) { this.image = image; }

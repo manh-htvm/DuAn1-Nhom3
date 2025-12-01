@@ -49,6 +49,30 @@
                 android:textStyle="bold"/>
         </LinearLayout>
 
+        <!-- Số lượng còn -->
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="horizontal"
+            android:layout_marginTop="8dp">
+
+            <TextView
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="Số lượng còn: "
+                android:textSize="16sp"
+                android:textStyle="bold"/>
+
+            <TextView
+                android:id="@+id/txtStock"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="0"
+                android:textColor="#4CAF50"
+                android:textSize="16sp"
+                android:textStyle="bold"/>
+        </LinearLayout>
+
         <!-- Tổng tiền -->
         <LinearLayout
             android:layout_width="match_parent"
@@ -231,14 +255,6 @@
                 android:layout_marginStart="8dp" />
         </LinearLayout>
 
-        <Button
-            android:id="@+id/btnAddReview"
-            android:layout_width="match_parent"
-            android:layout_height="48dp"
-            android:text="Viết đánh giá"
-            android:backgroundTint="#4CAF50"
-            android:textColor="#FFFFFF"
-            android:layout_marginBottom="16dp" />
 
         <TextView
             android:layout_width="wrap_content"

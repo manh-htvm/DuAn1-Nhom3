@@ -47,6 +47,23 @@
                 android:textSize="18sp"
                 android:layout_marginBottom="12dp" />
 
+            <!-- Tên người nhận -->
+            <TextView
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="Tên người nhận *"
+                android:textSize="14sp"
+                android:layout_marginBottom="4dp" />
+            <EditText
+                android:id="@+id/edtReceiverName"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:hint="Nhập tên người nhận"
+                android:inputType="textPersonName"
+                android:background="@drawable/edit_text_bg"
+                android:padding="12dp"
+                android:layout_marginBottom="12dp" />
+
             <!-- Số điện thoại -->
             <TextView
                 android:layout_width="wrap_content"

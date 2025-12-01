@@ -20,7 +20,6 @@
             android:layout_width="24dp"
             android:layout_height="24dp"
             android:src="@android:drawable/ic_menu_revert"
-            android:tint="#FFFFFF"
             android:clickable="true"
             android:focusable="true"
             android:padding="4dp"/>
@@ -61,11 +60,11 @@
             android:background="?android:attr/selectableItemBackground"/>
 
         <TextView
-            android:id="@+id/tabUnpaid"
+            android:id="@+id/tabPending"
             android:layout_width="0dp"
             android:layout_height="wrap_content"
             android:layout_weight="1"
-            android:text="Chưa thanh toán"
+            android:text="Nhận"
             android:textSize="16sp"
             android:textColor="#666666"
             android:gravity="center"
@@ -75,11 +74,25 @@
             android:background="?android:attr/selectableItemBackground"/>
 
         <TextView
-            android:id="@+id/tabPaid"
+            android:id="@+id/tabProcessing"
             android:layout_width="0dp"
             android:layout_height="wrap_content"
             android:layout_weight="1"
-            android:text="Đã thanh toán"
+            android:text="Chờ Vận chuyển"
+            android:textSize="16sp"
+            android:textColor="#666666"
+            android:gravity="center"
+            android:padding="16dp"
+            android:clickable="true"
+            android:focusable="true"
+            android:background="?android:attr/selectableItemBackground"/>
+
+        <TextView
+            android:id="@+id/tabShipped"
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_weight="1"
+            android:text="Đã vận chuyển"
             android:textSize="16sp"
             android:textColor="#666666"
             android:gravity="center"
@@ -110,4 +123,7 @@
         android:visibility="gone"/>
 
 </LinearLayout>
+
+
+
 

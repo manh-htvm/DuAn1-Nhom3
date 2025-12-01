@@ -52,6 +52,29 @@ public interface ApiService {
     @GET("products/{id}")
     Call<Product> getProductDetail(@Path("id") String id);
 
+    @GET("products/{id}/stock")
+    Call<fpl.manhph61584.duan1_nhom3_app.network.dto.StockResponse> getProductStock(
+        @Path("id") String id,
+        @Query("color") String color,
+        @Query("size") String size
+    );
+
+    @Multipart
+    @POST("products")
+    Call<Product> createProduct(
+        @Header("Authorization") String token,
+        @Part MultipartBody.Part image,
+        @Part("name") okhttp3.RequestBody name,
+        @Part("description") okhttp3.RequestBody description,
+        @Part("price") okhttp3.RequestBody price,
+        @Part("stock") okhttp3.RequestBody stock,
+        @Part("sold") okhttp3.RequestBody sold,
+        @Part("category") okhttp3.RequestBody category,
+        @Part("colors") okhttp3.RequestBody colors,
+        @Part("sizes") okhttp3.RequestBody sizes,
+        @Part("variants") okhttp3.RequestBody variants
+    );
+
     // Review endpoints
     @GET("reviews/product/{productId}")
     Call<List<Review>> getProductReviews(@Path("productId") String productId);
@@ -105,6 +128,21 @@ public interface ApiService {
     Call<List<fpl.manhph61584.duan1_nhom3_app.network.dto.OrderDto>> getOrders(
         @Header("Authorization") String token,
         @Query("status") String status
+    );
+
+    // Admin endpoints
+    @GET("reviews/admin/manage")
+    Call<List<Review>> getAdminReviews(
+        @Header("Authorization") String token,
+        @Query("product") String productId,
+        @Query("user") String userId,
+        @Query("rating") Integer rating
+    );
+
+    @POST("vouchers")
+    Call<Voucher> createVoucher(
+        @Header("Authorization") String token,
+        @Body Voucher voucher
     );
 }
 

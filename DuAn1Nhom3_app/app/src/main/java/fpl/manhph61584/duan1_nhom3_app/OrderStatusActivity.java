@@ -70,6 +70,7 @@ public class OrderStatusActivity extends AppCompatActivity implements OrderStatu
 
         setupEditButton();
         setupDeleteButton();
+        setupBuyNowButton();
         setupSelectAllCheckbox();
         updateCartTitle();
         setupBottomNavigation();
@@ -87,6 +88,47 @@ public class OrderStatusActivity extends AppCompatActivity implements OrderStatu
                 layoutEditBottomBar.setVisibility(View.GONE);
             }
             adapter.setEditMode(isEditMode);
+        });
+    }
+
+    private void setupBuyNowButton() {
+        btnMoveToWishlist.setOnClickListener(v -> {
+            Set<Integer> selectedPositions = adapter.getSelectedPositions();
+            if (selectedPositions.isEmpty()) {
+                Toast.makeText(this, "Vui lòng chọn sản phẩm để mua ngay", Toast.LENGTH_SHORT).show();
+                return;
+            }
+            
+            // Lấy tất cả sản phẩm được chọn để mua ngay
+            List<Integer> positions = new ArrayList<>(selectedPositions);
+            ArrayList<String> productIds = new ArrayList<>();
+            ArrayList<Integer> quantities = new ArrayList<>();
+            ArrayList<String> colors = new ArrayList<>();
+            ArrayList<String> sizes = new ArrayList<>();
+            
+            for (Integer pos : positions) {
+                if (pos >= 0 && pos < adapter.orderItems.size()) {
+                    CartItem item = adapter.orderItems.get(pos);
+                    if (item.getProduct() != null && item.getProduct().getId() != null) {
+                        productIds.add(item.getProduct().getId());
+                        quantities.add(item.getQuantity());
+                        colors.add(item.getColor() != null ? item.getColor() : "Mặc định");
+                        sizes.add(item.getSize() != null ? item.getSize() : "Free size");
+                    }
+                }
+            }
+            
+            if (!productIds.isEmpty()) {
+                // Chuyển đến CartActivity với chế độ "Mua ngay" và nhiều sản phẩm
+                Intent intent = new Intent(OrderStatusActivity.this, CartActivity.class);
+                intent.putExtra("buy_now", true);
+                intent.putStringArrayListExtra("product_ids", productIds);
+                intent.putIntegerArrayListExtra("quantities", quantities);
+                intent.putStringArrayListExtra("colors", colors);
+                intent.putStringArrayListExtra("sizes", sizes);
+                startActivity(intent);
+                overridePendingTransition(R.anim.slide_in_right, R.anim.slide_out_left);
+            }
         });
     }
 

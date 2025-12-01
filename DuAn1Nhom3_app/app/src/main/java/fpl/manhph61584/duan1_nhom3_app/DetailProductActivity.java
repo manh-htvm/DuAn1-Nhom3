@@ -42,7 +42,7 @@ import retrofit2.Response;
 public class DetailProductActivity extends AppCompatActivity {
 
     private ImageView imgProduct, btnPlus, btnMinus;
-    private TextView txtName, txtPrice, txtDesc, txtQuantity, txtTotalPrice;
+    private TextView txtName, txtPrice, txtDesc, txtQuantity, txtTotalPrice, txtStock;
     private TextView txtAverageRating, txtTotalReviews;
     private Button btnAddToCart, btnGoToCart, btnAddReview;
     private LinearLayout layoutColors, layoutSizes;
@@ -67,11 +67,11 @@ public class DetailProductActivity extends AppCompatActivity {
             txtTotalPrice = findViewById(R.id.txtTotalPrice);
             txtDesc = findViewById(R.id.txtDesc);
             txtQuantity = findViewById(R.id.txtQuantity);
+            txtStock = findViewById(R.id.txtStock);
             btnPlus = findViewById(R.id.btnPlus);
             btnMinus = findViewById(R.id.btnMinus);
             btnAddToCart = findViewById(R.id.btnAddToCart);
             btnGoToCart = findViewById(R.id.btnGoToCart);
-            btnAddReview = findViewById(R.id.btnAddReview);
             layoutColors = findViewById(R.id.layoutColors);
             layoutSizes = findViewById(R.id.layoutSizes);
             layoutReviews = findViewById(R.id.layoutReviews);
@@ -123,7 +123,25 @@ public class DetailProductActivity extends AppCompatActivity {
                 txtName.setText(p.getName());
                 txtPrice.setText(unitPrice + "₫");
                 txtDesc.setText(p.getDescription());
+                
+                // Hiển thị số lượng còn (tổng stock ban đầu)
+                int stock = p.getStock();
+                txtStock.setText(String.valueOf(stock));
+                if (stock <= 0) {
+                    txtStock.setTextColor(getResources().getColor(android.R.color.holo_red_dark));
+                    txtStock.setText("Hết hàng");
+                } else {
+                    txtStock.setTextColor(getResources().getColor(android.R.color.holo_green_dark));
+                }
+                
+                // Kiểm tra và cập nhật trạng thái nút mua
+                updateBuyButtonState();
                 updateTotalPrice();
+                
+                // Cập nhật stock theo variant nếu đã chọn màu/size
+                if ((selectedColor != null && !selectedColor.isEmpty()) || (selectedSize != null && !selectedSize.isEmpty())) {
+                    updateStockForVariant();
+                }
 
                 String imageUrl = p.getImage();
                 if (imageUrl != null && imageUrl.startsWith("/uploads/")) {
@@ -212,12 +230,14 @@ public class DetailProductActivity extends AppCompatActivity {
         selectedColor = color;
         resetSelection(layoutColors);
         styleSelectedOption(tv, true);
+        updateStockForVariant();
     }
 
     private void selectSizeOption(TextView tv, String size) {
         selectedSize = size;
         resetSelection(layoutSizes);
         styleSelectedOption(tv, true);
+        updateStockForVariant();
     }
 
     private void resetSelection(LinearLayout layout) {
@@ -233,12 +253,61 @@ public class DetailProductActivity extends AppCompatActivity {
         tv.setBackgroundResource(selected ? R.drawable.bg_selected : R.drawable.bg_unselect);
         tv.setTextColor(selected ? Color.parseColor("#000000") : Color.parseColor("#666666"));
     }
+    
+    private void updateStockForVariant() {
+        if (currentProduct == null || currentProduct.getId() == null) return;
+        
+        String color = selectedColor != null && !selectedColor.isEmpty() ? selectedColor : null;
+        String size = selectedSize != null && !selectedSize.isEmpty() ? selectedSize : null;
+        
+        ApiClient.getApiService().getProductStock(currentProduct.getId(), color, size).enqueue(new Callback<fpl.manhph61584.duan1_nhom3_app.network.dto.StockResponse>() {
+            @Override
+            public void onResponse(Call<fpl.manhph61584.duan1_nhom3_app.network.dto.StockResponse> call, Response<fpl.manhph61584.duan1_nhom3_app.network.dto.StockResponse> response) {
+                if (response.isSuccessful() && response.body() != null) {
+                    int stock = response.body().getStock();
+                    txtStock.setText(String.valueOf(stock));
+                    if (stock <= 0) {
+                        txtStock.setTextColor(getResources().getColor(android.R.color.holo_red_dark));
+                        txtStock.setText("Hết hàng");
+                    } else {
+                        txtStock.setTextColor(getResources().getColor(android.R.color.holo_green_dark));
+                    }
+                    updateBuyButtonState();
+                }
+            }
+
+            @Override
+            public void onFailure(Call<fpl.manhph61584.duan1_nhom3_app.network.dto.StockResponse> call, Throwable t) {
+                // Nếu lỗi, giữ nguyên stock tổng
+            }
+        });
+    }
 
     private void handleQuantity() {
         btnPlus.setOnClickListener(v -> {
-            quantity++;
-            txtQuantity.setText(String.valueOf(quantity));
-            updateTotalPrice();
+            if (currentProduct != null) {
+                // Lấy stock từ text view (đã được cập nhật theo variant)
+                String stockText = txtStock.getText().toString();
+                int stock;
+                if (stockText.equals("Hết hàng")) {
+                    stock = 0;
+                } else {
+                    try {
+                        stock = Integer.parseInt(stockText);
+                    } catch (NumberFormatException e) {
+                        stock = currentProduct.getStock(); // Fallback về stock tổng
+                    }
+                }
+                
+                if (quantity < stock) {
+                    quantity++;
+                    txtQuantity.setText(String.valueOf(quantity));
+                    updateTotalPrice();
+                    updateBuyButtonState();
+                } else {
+                    Toast.makeText(this, "Số lượng vượt quá số lượng còn lại (" + stock + ")", Toast.LENGTH_SHORT).show();
+                }
+            }
         });
 
         btnMinus.setOnClickListener(v -> {
@@ -246,8 +315,48 @@ public class DetailProductActivity extends AppCompatActivity {
                 quantity--;
                 txtQuantity.setText(String.valueOf(quantity));
                 updateTotalPrice();
+                updateBuyButtonState();
             }
         });
+    }
+    
+    private void updateBuyButtonState() {
+        if (currentProduct == null) {
+            btnAddToCart.setEnabled(false);
+            btnGoToCart.setEnabled(false);
+            return;
+        }
+        
+        // Lấy stock từ text view (đã được cập nhật theo variant)
+        String stockText = txtStock.getText().toString();
+        int stock;
+        if (stockText.equals("Hết hàng")) {
+            stock = 0;
+        } else {
+            try {
+                stock = Integer.parseInt(stockText);
+            } catch (NumberFormatException e) {
+                stock = currentProduct.getStock(); // Fallback về stock tổng
+            }
+        }
+        
+        boolean canBuy = stock > 0 && quantity <= stock;
+        
+        btnAddToCart.setEnabled(canBuy);
+        btnGoToCart.setEnabled(canBuy);
+        
+        if (!canBuy) {
+            if (stock <= 0) {
+                btnAddToCart.setText("Hết hàng");
+                btnGoToCart.setText("Hết hàng");
+            } else {
+                btnAddToCart.setText("Thêm vào giỏ");
+                btnGoToCart.setText("Mua ngay");
+            }
+        } else {
+            btnAddToCart.setText("Thêm vào giỏ");
+            btnGoToCart.setText("Mua ngay");
+        }
     }
 
     private void updateTotalPrice() {
@@ -259,6 +368,29 @@ public class DetailProductActivity extends AppCompatActivity {
         btnAddToCart.setOnClickListener(v -> {
             if (currentProduct == null) {
                 Toast.makeText(this, "Đang tải dữ liệu sản phẩm...", Toast.LENGTH_SHORT).show();
+                return;
+            }
+            
+            // Kiểm tra số lượng còn (theo variant nếu có)
+            String stockText = txtStock.getText().toString();
+            int stock;
+            if (stockText.equals("Hết hàng")) {
+                stock = 0;
+            } else {
+                try {
+                    stock = Integer.parseInt(stockText);
+                } catch (NumberFormatException e) {
+                    stock = currentProduct.getStock(); // Fallback về stock tổng
+                }
+            }
+            
+            if (stock <= 0) {
+                Toast.makeText(this, "Sản phẩm đã hết hàng", Toast.LENGTH_SHORT).show();
+                return;
+            }
+            
+            if (quantity > stock) {
+                Toast.makeText(this, "Số lượng vượt quá số lượng còn lại (" + stock + ")", Toast.LENGTH_SHORT).show();
                 return;
             }
             
@@ -304,6 +436,29 @@ public class DetailProductActivity extends AppCompatActivity {
                 return;
             }
             
+            // Kiểm tra số lượng còn (theo variant nếu có)
+            String stockText = txtStock.getText().toString();
+            int stock;
+            if (stockText.equals("Hết hàng")) {
+                stock = 0;
+            } else {
+                try {
+                    stock = Integer.parseInt(stockText);
+                } catch (NumberFormatException e) {
+                    stock = currentProduct.getStock(); // Fallback về stock tổng
+                }
+            }
+            
+            if (stock <= 0) {
+                Toast.makeText(this, "Sản phẩm đã hết hàng", Toast.LENGTH_SHORT).show();
+                return;
+            }
+            
+            if (quantity > stock) {
+                Toast.makeText(this, "Số lượng vượt quá số lượng còn lại (" + stock + ")", Toast.LENGTH_SHORT).show();
+                return;
+            }
+            
             // Mua ngay: truyền thông tin sản phẩm qua Intent
             android.content.Intent intent = new android.content.Intent(this, CartActivity.class);
             intent.putExtra("buy_now", true);
@@ -315,13 +470,6 @@ public class DetailProductActivity extends AppCompatActivity {
             overridePendingTransition(R.anim.slide_in_right, R.anim.slide_out_left);
         });
 
-        btnAddReview.setOnClickListener(v -> {
-            if (UserManager.getCurrentUser() == null) {
-                Toast.makeText(this, "Vui lòng đăng nhập để đánh giá", Toast.LENGTH_SHORT).show();
-                return;
-            }
-            showReviewDialog();
-        });
     }
 
     private void loadReviews(String productId) {

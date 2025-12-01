@@ -23,11 +23,11 @@ import retrofit2.Response;
 public class OrderHistoryActivity extends AppCompatActivity {
 
     private RecyclerView recyclerViewOrders;
-    private TextView txtEmptyOrders, tabAll, tabUnpaid, tabPaid;
+    private TextView txtEmptyOrders, tabAll, tabPending, tabProcessing, tabShipped;
     private ImageView btnBack;
     private OrderHistoryAdapter adapter;
     private List<OrderDto> allOrders = new ArrayList<>();
-    private String currentFilter = "all"; // "all", "unpaid", "paid"
+    private String currentFilter = "all"; // "all", "pending", "processing", "shipped"
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -37,8 +37,9 @@ public class OrderHistoryActivity extends AppCompatActivity {
         recyclerViewOrders = findViewById(R.id.recyclerViewOrders);
         txtEmptyOrders = findViewById(R.id.txtEmptyOrders);
         tabAll = findViewById(R.id.tabAll);
-        tabUnpaid = findViewById(R.id.tabUnpaid);
-        tabPaid = findViewById(R.id.tabPaid);
+        tabPending = findViewById(R.id.tabPending);
+        tabProcessing = findViewById(R.id.tabProcessing);
+        tabShipped = findViewById(R.id.tabShipped);
         btnBack = findViewById(R.id.btnBack);
 
         adapter = new OrderHistoryAdapter(this, new ArrayList<>());
@@ -58,14 +59,20 @@ public class OrderHistoryActivity extends AppCompatActivity {
             filterOrders();
         });
 
-        tabUnpaid.setOnClickListener(v -> {
-            currentFilter = "unpaid";
+        tabPending.setOnClickListener(v -> {
+            currentFilter = "pending";
             updateTabSelection();
             filterOrders();
         });
 
-        tabPaid.setOnClickListener(v -> {
-            currentFilter = "paid";
+        tabProcessing.setOnClickListener(v -> {
+            currentFilter = "processing";
+            updateTabSelection();
+            filterOrders();
+        });
+
+        tabShipped.setOnClickListener(v -> {
+            currentFilter = "shipped";
             updateTabSelection();
             filterOrders();
         });
@@ -75,11 +82,14 @@ public class OrderHistoryActivity extends AppCompatActivity {
         tabAll.setTextColor(getResources().getColor(currentFilter.equals("all") ? R.color.primary : android.R.color.darker_gray));
         tabAll.setTypeface(null, currentFilter.equals("all") ? android.graphics.Typeface.BOLD : android.graphics.Typeface.NORMAL);
         
-        tabUnpaid.setTextColor(getResources().getColor(currentFilter.equals("unpaid") ? R.color.primary : android.R.color.darker_gray));
-        tabUnpaid.setTypeface(null, currentFilter.equals("unpaid") ? android.graphics.Typeface.BOLD : android.graphics.Typeface.NORMAL);
+        tabPending.setTextColor(getResources().getColor(currentFilter.equals("pending") ? R.color.primary : android.R.color.darker_gray));
+        tabPending.setTypeface(null, currentFilter.equals("pending") ? android.graphics.Typeface.BOLD : android.graphics.Typeface.NORMAL);
         
-        tabPaid.setTextColor(getResources().getColor(currentFilter.equals("paid") ? R.color.primary : android.R.color.darker_gray));
-        tabPaid.setTypeface(null, currentFilter.equals("paid") ? android.graphics.Typeface.BOLD : android.graphics.Typeface.NORMAL);
+        tabProcessing.setTextColor(getResources().getColor(currentFilter.equals("processing") ? R.color.primary : android.R.color.darker_gray));
+        tabProcessing.setTypeface(null, currentFilter.equals("processing") ? android.graphics.Typeface.BOLD : android.graphics.Typeface.NORMAL);
+        
+        tabShipped.setTextColor(getResources().getColor(currentFilter.equals("shipped") ? R.color.primary : android.R.color.darker_gray));
+        tabShipped.setTypeface(null, currentFilter.equals("shipped") ? android.graphics.Typeface.BOLD : android.graphics.Typeface.NORMAL);
     }
 
     private void loadOrders() {
@@ -118,9 +128,11 @@ public class OrderHistoryActivity extends AppCompatActivity {
         for (OrderDto order : allOrders) {
             if (currentFilter.equals("all")) {
                 filteredOrders.add(order);
-            } else if (currentFilter.equals("unpaid") && "unpaid".equals(order.getPaymentStatus())) {
+            } else if (currentFilter.equals("pending") && "pending".equals(order.getStatus())) {
                 filteredOrders.add(order);
-            } else if (currentFilter.equals("paid") && "paid".equals(order.getPaymentStatus())) {
+            } else if (currentFilter.equals("processing") && "processing".equals(order.getStatus())) {
+                filteredOrders.add(order);
+            } else if (currentFilter.equals("shipped") && ("shipped".equals(order.getStatus()) || "delivered".equals(order.getStatus()))) {
                 filteredOrders.add(order);
             }
         }

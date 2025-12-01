@@ -50,6 +50,22 @@ router.post('/', verifyToken, async (req, res) => {
       });
     }
 
+    // Kiểm tra user đã mua sản phẩm này chưa (chỉ cho phép đánh giá sau khi đã mua)
+    const Order = require('../models/Order');
+    const hasPurchased = await Order.findOne({
+      user: userId,
+      'items.product': productId,
+      paymentStatus: 'paid'
+    });
+
+    if (!hasPurchased) {
+      console.log('❌ User chưa mua sản phẩm này');
+      return res.status(403).json({ 
+        message: 'Bạn chỉ có thể đánh giá sản phẩm sau khi đã mua',
+        error: 'Product not purchased'
+      });
+    }
+
     // Kiểm tra xem user đã đánh giá sản phẩm này chưa
     const existingReview = await Review.findOne({ user: userId, product: productId });
     if (existingReview) {

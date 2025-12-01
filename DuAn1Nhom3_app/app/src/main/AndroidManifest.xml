@@ -54,6 +54,24 @@
         <activity
             android:name=".OrderHistoryActivity"
             android:exported="false" />
+        <activity
+            android:name=".AdminActivity"
+            android:exported="false" />
+        <activity
+            android:name=".AdminProductManagementActivity"
+            android:exported="false" />
+        <activity
+            android:name=".AdminUserManagementActivity"
+            android:exported="false" />
+        <activity
+            android:name=".AdminVoucherManagementActivity"
+            android:exported="false" />
+        <activity
+            android:name=".AdminReviewManagementActivity"
+            android:exported="false" />
+        <activity
+            android:name=".AdminStatisticsActivity"
+            android:exported="false" />
     </application>
 
 </manifest>

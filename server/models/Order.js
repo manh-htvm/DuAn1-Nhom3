@@ -56,6 +56,10 @@ const orderSchema = new mongoose.Schema({
     enum: ['unpaid', 'paid'],
     default: 'unpaid'
   },
+  receiverName: {
+    type: String,
+    required: true
+  },
   phone: {
     type: String,
     required: true

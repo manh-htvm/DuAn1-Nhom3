@@ -3,13 +3,15 @@ package fpl.manhph61584.duan1_nhom3_app.network.dto;
 import java.util.List;
 
 public class CreateOrderRequest {
+    private String receiverName;
     private String phone;
     private String address;
     private String note;
     private String voucherId;
     private List<OrderItemRequest> items;
 
-    public CreateOrderRequest(String phone, String address, String note, String voucherId) {
+    public CreateOrderRequest(String receiverName, String phone, String address, String note, String voucherId) {
+        this.receiverName = receiverName;
         this.phone = phone;
         this.address = address;
         this.note = note;
@@ -17,12 +19,21 @@ public class CreateOrderRequest {
         this.items = null;
     }
 
-    public CreateOrderRequest(String phone, String address, String note, String voucherId, List<OrderItemRequest> items) {
+    public CreateOrderRequest(String receiverName, String phone, String address, String note, String voucherId, List<OrderItemRequest> items) {
+        this.receiverName = receiverName;
         this.phone = phone;
         this.address = address;
         this.note = note;
         this.voucherId = voucherId;
         this.items = items;
+    }
+
+    public String getReceiverName() {
+        return receiverName;
+    }
+
+    public void setReceiverName(String receiverName) {
+        this.receiverName = receiverName;
     }
 
     public String getPhone() {

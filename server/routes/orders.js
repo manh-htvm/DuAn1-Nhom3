@@ -1,6 +1,8 @@
 const express = require('express');
 const Order = require('../models/Order');
 const Cart = require('../models/Cart');
+const Product = require('../models/Product');
+const Voucher = require('../models/Voucher');
 const { verifyToken } = require('../middleware/auth');
 const router = express.Router();
 
@@ -12,12 +14,12 @@ const router = express.Router();
 router.post('/', verifyToken, async (req, res) => {
   try {
     const userId = req.user.id;
-    const { phone, address, note, voucherId, items } = req.body;
+    const { receiverName, phone, address, note, voucherId, items } = req.body;
 
-    console.log('Order request:', { phone, address, note, voucherId, itemsCount: items ? items.length : 0 });
+    console.log('Order request:', { receiverName, phone, address, note, voucherId, itemsCount: items ? items.length : 0 });
 
-    if (!phone || !address) {
-      return res.status(400).json({ message: 'Vui lòng nhập số điện thoại và địa chỉ' });
+    if (!receiverName || !phone || !address) {
+      return res.status(400).json({ message: 'Vui lòng nhập đầy đủ thông tin: tên người nhận, số điện thoại và địa chỉ' });
     }
 
     let orderItems = [];
@@ -29,7 +31,6 @@ router.post('/', verifyToken, async (req, res) => {
       return res.status(400).json({ message: 'Vui lòng gửi danh sách sản phẩm' });
     }
 
-    const Product = require('../models/Product');
     for (const item of items) {
       console.log('Processing item:', item);
       if (!item.productId || item.quantity === undefined || item.quantity === null || !item.price) {
@@ -58,7 +59,6 @@ router.post('/', verifyToken, async (req, res) => {
     // Tính giảm giá nếu có voucher
     let discountAmount = 0;
     if (voucherId) {
-      const Voucher = require('../models/Voucher');
       const voucher = await Voucher.findById(voucherId);
       if (voucher && voucher.isActive) {
         const now = new Date();
@@ -101,6 +101,7 @@ router.post('/', verifyToken, async (req, res) => {
       totalAmount,
       discountAmount,
       finalAmount,
+      receiverName,
       phone,
       shippingAddress: address,
       note: note || '',
@@ -109,16 +110,50 @@ router.post('/', verifyToken, async (req, res) => {
       status: 'pending'
     });
 
-    console.log('✅ Order đã được lưu vào MongoDB:', {
-      orderId: order._id,
-      userId: userId,
-      itemsCount: order.items.length,
-      totalAmount: order.totalAmount,
-      finalAmount: order.finalAmount,
-      paymentStatus: order.paymentStatus
-    });
+   // --- DÁN ĐOẠN NÀY VÀO ---
+    // Cập nhật stock và sold (Hỗ trợ cả sản phẩm thường và biến thể)
+    for (const item of orderItems) {
+      try {
+        const quantity = Math.abs(item.quantity); // Đảm bảo số lượng luôn dương để cộng trừ đúng
 
-    // Xóa giỏ hàng sau khi tạo đơn hàng thành công
+        // TH1: Nếu item có màu và size (Sản phẩm có biến thể)
+        // Tìm đúng sản phẩm có chứa biến thể màu/size đó để trừ kho
+        const updatedVariant = await Product.findOneAndUpdate(
+          {
+            _id: item.product,
+            "variants.color": item.color, 
+            "variants.size": item.size    
+          },
+          {
+            $inc: {
+              "variants.$.stock": -quantity, // Trừ kho của biến thể
+              "variants.$.sold": quantity,   // Tăng đã bán của biến thể
+              "stock": -quantity,            // Trừ kho tổng (ở ngoài)
+              "sold": quantity               // Tăng đã bán tổng (ở ngoài)
+            }
+          },
+          { new: true }
+        );
+
+        // TH2: Nếu không update được biến thể (do sp không có biến thể hoặc sai màu/size)
+        // Thì chỉ update Stock/Sold ở lớp ngoài cùng
+        if (!updatedVariant) {
+           await Product.findByIdAndUpdate(item.product, {
+              $inc: {
+                stock: -quantity,
+                sold: quantity
+              }
+           });
+           console.log(`✅ Đã cập nhật sản phẩm thường (không biến thể): ${item.product}`);
+        } else {
+           console.log(`✅ Đã cập nhật biến thể ${item.color}/${item.size} của sp ${item.product}`);
+        }
+
+      } catch (updateError) {
+        console.error(`⚠️ Lỗi cập nhật kho hàng cho sp ${item.product}:`, updateError.message);
+      }
+    }
+
     try {
       await Cart.findOneAndDelete({ user: userId });
       console.log('✅ Cart đã được xóa sau khi tạo order');

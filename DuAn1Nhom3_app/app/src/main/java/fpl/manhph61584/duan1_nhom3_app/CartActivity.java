@@ -20,6 +20,7 @@ import java.util.List;
 
 import fpl.manhph61584.duan1_nhom3_app.network.ApiClient;
 import fpl.manhph61584.duan1_nhom3_app.network.ApiService;
+import fpl.manhph61584.duan1_nhom3_app.network.dto.OrderItemRequest;
 import fpl.manhph61584.duan1_nhom3_app.Voucher;
 import fpl.manhph61584.duan1_nhom3_app.UserManager;
 import fpl.manhph61584.duan1_nhom3_app.Product;
@@ -32,7 +33,7 @@ public class CartActivity extends AppCompatActivity implements VoucherAdapter.On
     private RecyclerView recyclerView;
     private TextView txtSubtotal, txtTotal, txtDiscount, txtSelectedVoucherCode, txtSelectedVoucherName;
     private LinearLayout layoutDiscount, layoutVoucherSelector;
-    private EditText edtPhone, edtAddress, edtNote;
+    private EditText edtReceiverName, edtPhone, edtAddress, edtNote;
     private Button btnCheckout;
     private CartAdapter adapter;
     private VoucherAdapter voucherAdapter;
@@ -53,6 +54,7 @@ public class CartActivity extends AppCompatActivity implements VoucherAdapter.On
         txtSelectedVoucherName = findViewById(R.id.txtSelectedVoucherName);
         layoutDiscount = findViewById(R.id.layoutDiscount);
         layoutVoucherSelector = findViewById(R.id.layoutVoucherSelector);
+        edtReceiverName = findViewById(R.id.edtReceiverName);
         edtPhone = findViewById(R.id.edtPhone);
         edtAddress = findViewById(R.id.edtAddress);
         edtNote = findViewById(R.id.edtNote);
@@ -63,18 +65,29 @@ public class CartActivity extends AppCompatActivity implements VoucherAdapter.On
         recyclerView.setLayoutManager(layoutManager);
         recyclerView.setAdapter(adapter);
         
-        // Kiểm tra nếu là "Mua ngay" từ DetailProductActivity
+        // Kiểm tra nếu là "Mua ngay" từ DetailProductActivity hoặc OrderStatusActivity
         isBuyNowMode = getIntent().getBooleanExtra("buy_now", false);
         if (isBuyNowMode) {
-            String productId = getIntent().getStringExtra("product_id");
-            int quantity = getIntent().getIntExtra("quantity", 1);
-            String color = getIntent().getStringExtra("color");
-            String size = getIntent().getStringExtra("size");
-            
-            if (productId != null && !productId.isEmpty()) {
-                loadProductForBuyNow(productId, quantity, color, size);
+            // Kiểm tra xem có nhiều sản phẩm không (từ OrderStatusActivity)
+            ArrayList<String> productIds = getIntent().getStringArrayListExtra("product_ids");
+            if (productIds != null && !productIds.isEmpty()) {
+                // Mua ngay nhiều sản phẩm
+                ArrayList<Integer> quantities = getIntent().getIntegerArrayListExtra("quantities");
+                ArrayList<String> colors = getIntent().getStringArrayListExtra("colors");
+                ArrayList<String> sizes = getIntent().getStringArrayListExtra("sizes");
+                loadMultipleProductsForBuyNow(productIds, quantities, colors, sizes);
             } else {
-                loadCartFromServer();
+                // Mua ngay 1 sản phẩm (từ DetailProductActivity)
+                String productId = getIntent().getStringExtra("product_id");
+                int quantity = getIntent().getIntExtra("quantity", 1);
+                String color = getIntent().getStringExtra("color");
+                String size = getIntent().getStringExtra("size");
+                
+                if (productId != null && !productId.isEmpty()) {
+                    loadProductForBuyNow(productId, quantity, color, size);
+                } else {
+                    loadCartFromServer();
+                }
             }
         } else {
             loadCartFromServer();
@@ -133,6 +146,58 @@ public class CartActivity extends AppCompatActivity implements VoucherAdapter.On
                 loadCartFromServer();
             }
         });
+    }
+
+    private void loadMultipleProductsForBuyNow(ArrayList<String> productIds, ArrayList<Integer> quantities, ArrayList<String> colors, ArrayList<String> sizes) {
+        // Load nhiều sản phẩm từ API
+        List<CartItem> cartItems = new ArrayList<>();
+        final int[] loadedCount = {0};
+        final int totalProducts = productIds.size();
+        
+        for (int i = 0; i < productIds.size(); i++) {
+            String productId = productIds.get(i);
+            int quantity = (quantities != null && i < quantities.size()) ? quantities.get(i) : 1;
+            String color = (colors != null && i < colors.size()) ? colors.get(i) : "Mặc định";
+            String size = (sizes != null && i < sizes.size()) ? sizes.get(i) : "Free size";
+            
+            ApiClient.getApiService().getProductDetail(productId).enqueue(new Callback<Product>() {
+                @Override
+                public void onResponse(Call<Product> call, Response<Product> response) {
+                    if (response.isSuccessful() && response.body() != null) {
+                        Product product = response.body();
+                        CartItem buyNowItem = new CartItem(product, quantity, color, size);
+                        cartItems.add(buyNowItem);
+                    }
+                    
+                    loadedCount[0]++;
+                    if (loadedCount[0] >= totalProducts) {
+                        // Đã load xong tất cả sản phẩm
+                        if (!cartItems.isEmpty()) {
+                            adapter = new CartAdapter(CartActivity.this, cartItems);
+                            recyclerView.setAdapter(adapter);
+                            updateTotal();
+                        } else {
+                            loadCartFromServer();
+                        }
+                    }
+                }
+
+                @Override
+                public void onFailure(Call<Product> call, Throwable t) {
+                    loadedCount[0]++;
+                    if (loadedCount[0] >= totalProducts) {
+                        // Đã load xong tất cả (kể cả lỗi)
+                        if (!cartItems.isEmpty()) {
+                            adapter = new CartAdapter(CartActivity.this, cartItems);
+                            recyclerView.setAdapter(adapter);
+                            updateTotal();
+                        } else {
+                            loadCartFromServer();
+                        }
+                    }
+                }
+            });
+        }
     }
 
     private void loadCartFromServer() {
@@ -365,6 +430,7 @@ public class CartActivity extends AppCompatActivity implements VoucherAdapter.On
     }
 
     private void handleCheckout() {
+        String receiverName = edtReceiverName.getText().toString().trim();
         String phone = edtPhone.getText().toString().trim();
         String address = edtAddress.getText().toString().trim();
         String note = edtNote.getText().toString().trim();
@@ -372,6 +438,12 @@ public class CartActivity extends AppCompatActivity implements VoucherAdapter.On
         // Kiểm tra từ adapter (bao gồm cả sản phẩm "Mua ngay")
         if (adapter == null || adapter.items == null || adapter.items.isEmpty()) {
             Toast.makeText(this, "Giỏ hàng trống", Toast.LENGTH_SHORT).show();
+            return;
+        }
+
+        if (TextUtils.isEmpty(receiverName)) {
+            Toast.makeText(this, "Vui lòng nhập tên người nhận", Toast.LENGTH_SHORT).show();
+            edtReceiverName.requestFocus();
             return;
         }
 
@@ -409,12 +481,12 @@ public class CartActivity extends AppCompatActivity implements VoucherAdapter.On
         String voucherId = selectedVoucher != null ? selectedVoucher.getId() : null;
 
         // Luôn gửi items trực tiếp trong request (không phụ thuộc vào giỏ hàng trên server)
-        List<fpl.manhph61584.duan1_nhom3_app.network.dto.OrderItemRequest> orderItems = new ArrayList<>();
+        List<OrderItemRequest> orderItems = new ArrayList<>();
         if (adapter != null && adapter.items != null && !adapter.items.isEmpty()) {
             for (CartItem item : adapter.items) {
                 if (item.getProduct() != null && item.getProduct().getId() != null) {
-                    fpl.manhph61584.duan1_nhom3_app.network.dto.OrderItemRequest orderItem = 
-                        new fpl.manhph61584.duan1_nhom3_app.network.dto.OrderItemRequest(
+                    OrderItemRequest orderItem = 
+                        new OrderItemRequest(
                             item.getProduct().getId(),
                             item.getQuantity(),
                             item.getUnitPrice(),
@@ -436,7 +508,7 @@ public class CartActivity extends AppCompatActivity implements VoucherAdapter.On
         
         // Tạo request với items
         fpl.manhph61584.duan1_nhom3_app.network.dto.CreateOrderRequest request = 
-            new fpl.manhph61584.duan1_nhom3_app.network.dto.CreateOrderRequest(phone, address, note, voucherId, orderItems);
+            new fpl.manhph61584.duan1_nhom3_app.network.dto.CreateOrderRequest(receiverName, phone, address, note, voucherId, orderItems);
 
         String authHeader = "Bearer " + token;
         

@@ -87,10 +87,10 @@
             android:layout_width="0dp"
             android:layout_height="wrap_content"
             android:layout_weight="1"
-            android:text="Chuyển đến mục Yêu thích"
+            android:text="Mua ngay"
             android:textSize="14sp"
-            android:textColor="#666666"
-            android:backgroundTint="#FFFFFF"
+            android:textColor="#FFFFFF"
+            android:backgroundTint="#FF5722"
             android:layout_marginHorizontal="8dp"
             android:padding="8dp" />
 
