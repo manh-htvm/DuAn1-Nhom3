@@ -139,5 +139,91 @@ router.post('/', verifyToken, requireAdmin, async (req, res) => {
   }
 });
 
+/**
+ * Admin lấy tất cả vouchers (bao gồm cả inactive)
+ * Headers: Authorization: Bearer <token>
+ */
+router.get('/admin/all', verifyToken, requireAdmin, async (req, res) => {
+  try {
+    const vouchers = await Voucher.find().sort({ createdAt: -1 });
+    res.json(vouchers);
+  } catch (error) {
+    res.status(500).json({ message: 'Không thể lấy danh sách vouchers', error: error.message });
+  }
+});
+
+/**
+ * Admin cập nhật voucher
+ * Headers: Authorization: Bearer <token>
+ */
+router.put('/:id', verifyToken, requireAdmin, async (req, res) => {
+  try {
+    const voucherId = req.params.id;
+    const {
+      code,
+      name,
+      description,
+      discountType,
+      discountValue,
+      minPurchaseAmount,
+      maxDiscountAmount,
+      startDate,
+      endDate,
+      usageLimit,
+      isActive
+    } = req.body;
+
+    const voucher = await Voucher.findById(voucherId);
+    if (!voucher) {
+      return res.status(404).json({ message: 'Không tìm thấy voucher' });
+    }
+
+    // Kiểm tra code đã tồn tại chưa (nếu thay đổi code)
+    if (code && code.toUpperCase() !== voucher.code) {
+      const existingVoucher = await Voucher.findOne({ code: code.toUpperCase() });
+      if (existingVoucher) {
+        return res.status(409).json({ message: 'Mã voucher đã tồn tại' });
+      }
+      voucher.code = code.toUpperCase();
+    }
+
+    if (name) voucher.name = name;
+    if (description !== undefined) voucher.description = description;
+    if (discountType) voucher.discountType = discountType;
+    if (discountValue !== undefined) voucher.discountValue = Number(discountValue);
+    if (minPurchaseAmount !== undefined) voucher.minPurchaseAmount = Number(minPurchaseAmount);
+    if (maxDiscountAmount !== undefined) voucher.maxDiscountAmount = maxDiscountAmount ? Number(maxDiscountAmount) : null;
+    if (startDate) voucher.startDate = new Date(startDate);
+    if (endDate) voucher.endDate = new Date(endDate);
+    if (usageLimit !== undefined) voucher.usageLimit = usageLimit ? Number(usageLimit) : null;
+    if (isActive !== undefined) voucher.isActive = isActive;
+    voucher.updatedAt = new Date();
+
+    await voucher.save();
+    res.json(voucher);
+  } catch (error) {
+    res.status(500).json({ message: 'Không thể cập nhật voucher', error: error.message });
+  }
+});
+
+/**
+ * Admin xóa voucher
+ * Headers: Authorization: Bearer <token>
+ */
+router.delete('/:id', verifyToken, requireAdmin, async (req, res) => {
+  try {
+    const voucherId = req.params.id;
+    const voucher = await Voucher.findByIdAndDelete(voucherId);
+    
+    if (!voucher) {
+      return res.status(404).json({ message: 'Không tìm thấy voucher' });
+    }
+
+    res.json({ message: 'Đã xóa voucher thành công' });
+  } catch (error) {
+    res.status(500).json({ message: 'Không thể xóa voucher', error: error.message });
+  }
+});
+
 module.exports = router;
 

@@ -14,6 +14,9 @@ app.use(express.urlencoded({ extended: true }));
 // Serve static files từ thư mục uploads
 app.use('/uploads', express.static('uploads'));
 
+// Serve static files từ thư mục public (cho admin panel)
+app.use(express.static('public'));
+
 // Routes API (tạm thời để trống, sẽ thêm logic sau)
 const usersRoutes = require('./routes/users');
 const productsRoutes = require('./routes/products');

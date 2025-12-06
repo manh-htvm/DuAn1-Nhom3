@@ -298,6 +298,7 @@ curl http://localhost:3000
   "image": "/uploads/1234567890-123456789.jpg",
   "colors": ["Đỏ", "Đen", "Xanh"],
   "sizes": ["S", "M", "L", "XL"],
+  "variants": [{"color":"Đỏ Nâu","size":"M","stock":10,"sold":0},{"color":"Đen","size":"L","stock":15,"sold":3}],
   "createdAt": "...",
   "updatedAt": "..."
 }
