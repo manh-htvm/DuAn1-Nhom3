@@ -194,4 +194,67 @@ class AdminClient {
       throw new Error(`Lỗi xóa sản phẩm: ${error.message}`);
     }
   }
+
+  // ==================== QUẢN LÝ ĐÁNH GIÁ ====================
+
+  /**
+   * Lấy danh sách đánh giá (admin)
+   * @param {string} productId - ID sản phẩm (optional)
+   * @param {string} userId - ID người dùng (optional)
+   * @param {number} rating - Điểm đánh giá (optional)
+   */
+  async getAdminReviews(productId = null, userId = null, rating = null) {
+    try {
+      let url = `${this.baseURL}/api/reviews/admin/manage?`;
+      if (productId) url += `product=${encodeURIComponent(productId)}&`;
+      if (userId) url += `user=${encodeURIComponent(userId)}&`;
+      if (rating) url += `rating=${rating}&`;
+      url = url.replace(/&$/, '');
+
+      const response = await fetch(url, {
+        method: 'GET',
+        headers: this.getHeaders()
+      });
+
+      return await this.handleResponse(response);
+    } catch (error) {
+      throw new Error(`Lỗi lấy danh sách đánh giá: ${error.message}`);
+    }
+  }
+
+  /**
+   * Phản hồi đánh giá
+   * @param {string} reviewId - ID đánh giá
+   * @param {string} reply - Nội dung phản hồi
+   */
+  async replyReview(reviewId, reply) {
+    try {
+      const response = await fetch(`${this.baseURL}/api/reviews/${reviewId}/reply`, {
+        method: 'POST',
+        headers: this.getHeaders(),
+        body: JSON.stringify({ reply })
+      });
+
+      return await this.handleResponse(response);
+    } catch (error) {
+      throw new Error(`Lỗi phản hồi đánh giá: ${error.message}`);
+    }
+  }
+
+  /**
+   * Xóa đánh giá
+   * @param {string} reviewId - ID đánh giá
+   */
+  async deleteReview(reviewId) {
+    try {
+      const response = await fetch(`${this.baseURL}/api/reviews/${reviewId}`, {
+        method: 'DELETE',
+        headers: this.getHeaders()
+      });
+
+      return await this.handleResponse(response);
+    } catch (error) {
+      throw new Error(`Lỗi xóa đánh giá: ${error.message}`);
+    }
+  }
 }
