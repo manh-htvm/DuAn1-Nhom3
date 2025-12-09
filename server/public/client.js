@@ -154,6 +154,148 @@ class AdminClient {
     }
   }
 
+// ==================== QUẢN LÝ VOUCHER ====================
+
+/**
+ * Lấy danh sách tất cả vouchers (bao gồm inactive)
+ */
+async getAllVouchers() {
+  try {
+    const response = await fetch(`${this.baseURL}/api/vouchers/admin/all`, {
+      method: 'GET',
+      headers: this.getHeaders() // Yêu cầu token
+    });
+
+    return await this.handleResponse(response);
+  } catch (error) {
+    throw new Error(`Lỗi lấy danh sách vouchers: ${error.message}`);
+  }
+}
+
+/**
+ * Tạo voucher mới
+ * @param {Object} voucherData - Dữ liệu voucher
+ */
+async createVoucher(voucherData) {
+  try {
+    const response = await fetch(`${this.baseURL}/api/vouchers`, {
+      method: 'POST',
+      headers: this.getHeaders(), // Yêu cầu token
+      body: JSON.stringify(voucherData)
+    });
+
+    return await this.handleResponse(response);
+  } catch (error) {
+    throw new Error(`Lỗi tạo voucher: ${error.message}`);
+  }
+}
+
+/**
+ * Cập nhật voucher
+ * @param {string} voucherId - ID voucher
+ * @param {Object} voucherData - Dữ liệu voucher cập nhật
+ */
+async updateVoucher(voucherId, voucherData) {
+  try {
+    const response = await fetch(`${this.baseURL}/api/vouchers/${voucherId}`, {
+      method: 'PUT',
+      headers: this.getHeaders(), // Yêu cầu token
+      body: JSON.stringify(voucherData)
+    });
+
+    return await this.handleResponse(response);
+  } catch (error) {
+    throw new Error(`Lỗi cập nhật voucher: ${error.message}`);
+  }
+}
+
+/**
+ * Xóa voucher
+ * @param {string} voucherId - ID voucher
+ */
+async deleteVoucher(voucherId) {
+  try {
+    const response = await fetch(`${this.baseURL}/api/vouchers/${voucherId}`, {
+      method: 'DELETE',
+      headers: this.getHeaders() // Yêu cầu token
+    });
+
+    return await this.handleResponse(response);
+  } catch (error) {
+    throw new Error(`Lỗi xóa voucher: ${error.message}`);
+  }
+}
+// ==================== QUẢN LÝ VOUCHER ====================
+
+/**
+ * Lấy danh sách tất cả vouchers (bao gồm inactive)
+ */
+async getAllVouchers() {
+  try {
+    const response = await fetch(`${this.baseURL}/api/vouchers/admin/all`, {
+      method: 'GET',
+      headers: this.getHeaders() // Yêu cầu token
+    });
+
+    return await this.handleResponse(response);
+  } catch (error) {
+    throw new Error(`Lỗi lấy danh sách vouchers: ${error.message}`);
+  }
+}
+
+/**
+ * Tạo voucher mới
+ * @param {Object} voucherData - Dữ liệu voucher
+ */
+async createVoucher(voucherData) {
+  try {
+    const response = await fetch(`${this.baseURL}/api/vouchers`, {
+      method: 'POST',
+      headers: this.getHeaders(), // Yêu cầu token
+      body: JSON.stringify(voucherData)
+    });
+
+    return await this.handleResponse(response);
+  } catch (error) {
+    throw new Error(`Lỗi tạo voucher: ${error.message}`);
+  }
+}
+
+/**
+ * Cập nhật voucher
+ * @param {string} voucherId - ID voucher
+ * @param {Object} voucherData - Dữ liệu voucher cập nhật
+ */
+async updateVoucher(voucherId, voucherData) {
+  try {
+    const response = await fetch(`${this.baseURL}/api/vouchers/${voucherId}`, {
+      method: 'PUT',
+      headers: this.getHeaders(), // Yêu cầu token
+      body: JSON.stringify(voucherData)
+    });
+
+    return await this.handleResponse(response);
+  } catch (error) {
+    throw new Error(`Lỗi cập nhật voucher: ${error.message}`);
+  }
+}
+
+/**
+ * Xóa voucher
+ * @param {string} voucherId - ID voucher
+ */
+async deleteVoucher(voucherId) {
+  try {
+    const response = await fetch(`${this.baseURL}/api/vouchers/${voucherId}`, {
+      method: 'DELETE',
+      headers: this.getHeaders() // Yêu cầu token
+    });
+
+    return await this.handleResponse(response);
+  } catch (error) {
+    throw new Error(`Lỗi xóa voucher: ${error.message}`);
+  }
+}
   /**
    * Cập nhật sản phẩm
    * @param {string} productId - ID sản phẩm
