@@ -3,7 +3,9 @@ package fpl.manhph61584.duan1_nhom3_app;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
+import android.widget.Button;
 import android.widget.ImageView;
+import android.widget.LinearLayout;
 import android.widget.TextView;
 
 import androidx.annotation.NonNull;
@@ -55,7 +57,6 @@ public class OrderDetailAdapter extends RecyclerView.Adapter<OrderDetailAdapter.
             double itemTotal = item.getPrice() * item.getQuantity();
             holder.txtPrice.setText(String.format("%,.0f₫", itemTotal));
 
-            // Load ảnh
             String imageUrl = product.getImage();
             if (imageUrl != null && imageUrl.startsWith("/uploads/")) {
                 imageUrl = "http://10.0.2.2:3000" + imageUrl;
@@ -65,6 +66,8 @@ public class OrderDetailAdapter extends RecyclerView.Adapter<OrderDetailAdapter.
                     .placeholder(R.drawable.ic_launcher_background)
                     .error(R.drawable.ic_launcher_background)
                     .into(holder.imgProduct);
+            
+            holder.layoutButtons.setVisibility(View.GONE);
         }
     }
 
@@ -76,6 +79,7 @@ public class OrderDetailAdapter extends RecyclerView.Adapter<OrderDetailAdapter.
     static class OrderItemViewHolder extends RecyclerView.ViewHolder {
         ImageView imgProduct;
         TextView txtName, txtVariant, txtQuantity, txtPrice;
+        LinearLayout layoutButtons;
 
         OrderItemViewHolder(@NonNull View itemView) {
             super(itemView);
@@ -84,6 +88,7 @@ public class OrderDetailAdapter extends RecyclerView.Adapter<OrderDetailAdapter.
             txtVariant = itemView.findViewById(R.id.orderTxtVariant);
             txtQuantity = itemView.findViewById(R.id.orderTxtQuantity);
             txtPrice = itemView.findViewById(R.id.orderTxtPrice);
+            layoutButtons = itemView.findViewById(R.id.layoutButtons);
         }
     }
 }

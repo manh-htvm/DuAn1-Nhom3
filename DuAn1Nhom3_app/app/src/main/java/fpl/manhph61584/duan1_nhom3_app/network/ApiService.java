@@ -135,7 +135,8 @@ public interface ApiService {
     @PUT("orders/{id}/cancel")
     Call<fpl.manhph61584.duan1_nhom3_app.network.dto.OrderDto> cancelOrder(
         @Header("Authorization") String token,
-        @Path("id") String orderId
+        @Path("id") String orderId,
+        @Body fpl.manhph61584.duan1_nhom3_app.network.dto.CancelOrderRequest request
     );
 
     // Admin endpoints removed - chỉ dành cho khách hàng

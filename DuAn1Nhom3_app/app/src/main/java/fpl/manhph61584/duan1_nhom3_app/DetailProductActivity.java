@@ -26,6 +26,7 @@ import java.util.Locale;
 import fpl.manhph61584.duan1_nhom3_app.network.ApiClient;
 import fpl.manhph61584.duan1_nhom3_app.network.ApiService;
 import fpl.manhph61584.duan1_nhom3_app.network.dto.AddToCartRequest;
+import fpl.manhph61584.duan1_nhom3_app.network.dto.CartItemDto;
 import fpl.manhph61584.duan1_nhom3_app.network.dto.CartResponse;
 import fpl.manhph61584.duan1_nhom3_app.network.dto.ProductRatingResponse;
 import fpl.manhph61584.duan1_nhom3_app.network.dto.ReviewRequest;
@@ -409,22 +410,73 @@ public class DetailProductActivity extends AppCompatActivity {
             ApiClient.getApiService().addToCart(authHeader, request).enqueue(new Callback<CartResponse>() {
                 @Override
                 public void onResponse(Call<CartResponse> call, Response<CartResponse> response) {
+                    android.util.Log.d("AddToCart", "Response code: " + response.code());
+                    android.util.Log.d("AddToCart", "Response isSuccessful: " + response.isSuccessful());
+                    android.util.Log.d("AddToCart", "Response body is null: " + (response.body() == null));
+                    
                     if (response.isSuccessful() && response.body() != null) {
-                        // Thêm vào local cart sau khi server thành công
-                        CartManager.addToCart(currentProduct, quantity, safeColor, safeSize);
+                        // Đã lưu vào MongoDB thành công, sync local cart với server
+                        CartResponse cartResponse = response.body();
+                        List<CartItemDto> items = cartResponse.getItems();
+                        
+                        android.util.Log.d("AddToCart", "Cart response items count: " + (items != null ? items.size() : 0));
+                        
+                        // Clear local và sync với server
+                        CartManager.clear();
+                        if (items != null && !items.isEmpty()) {
+                            int addedCount = 0;
+                            for (CartItemDto dto : items) {
+                                if (dto != null && dto.getProduct() != null) {
+                                    CartManager.addToCart(
+                                        dto.getProduct(),
+                                        dto.getQuantity(),
+                                        dto.getColor() != null ? dto.getColor() : "Mặc định",
+                                        dto.getSize() != null ? dto.getSize() : "Free size"
+                                    );
+                                    addedCount++;
+                                    android.util.Log.d("AddToCart", "Added item: " + dto.getProduct().getName() + " x" + dto.getQuantity());
+                                } else {
+                                    android.util.Log.w("AddToCart", "Skipped null item or product");
+                                }
+                            }
+                            android.util.Log.d("AddToCart", "Total items added to local cart: " + addedCount);
+                        } else {
+                            android.util.Log.w("AddToCart", "Items list is null or empty");
+                        }
+                        android.util.Log.d("AddToCart", "Local cart items count: " + CartManager.getCartItems().size());
                         Toast.makeText(DetailProductActivity.this, "Đã thêm vào giỏ hàng", Toast.LENGTH_SHORT).show();
                     } else {
-                        // Vẫn thêm vào local cart nếu server lỗi
-                        CartManager.addToCart(currentProduct, quantity, safeColor, safeSize);
-                        Toast.makeText(DetailProductActivity.this, "Đã thêm vào giỏ hàng (offline)", Toast.LENGTH_SHORT).show();
+                        String errorMsg = "Lỗi thêm vào giỏ hàng";
+                        if (response.errorBody() != null) {
+                            try {
+                                String errorStr = response.errorBody().string();
+                                android.util.Log.e("AddToCart", "Error body: " + errorStr);
+                                try {
+                                    com.google.gson.JsonObject jsonObject = new com.google.gson.Gson().fromJson(errorStr, com.google.gson.JsonObject.class);
+                                    if (jsonObject.has("message")) {
+                                        errorMsg = jsonObject.get("message").getAsString();
+                                    } else if (jsonObject.has("error")) {
+                                        errorMsg = jsonObject.get("error").getAsString();
+                                    }
+                                } catch (Exception e) {
+                                    errorMsg += ": " + errorStr;
+                                }
+                            } catch (Exception e) {
+                                android.util.Log.e("AddToCart", "Error reading error body", e);
+                                errorMsg += " (Code: " + response.code() + ")";
+                            }
+                        } else {
+                            errorMsg += " (Code: " + response.code() + ")";
+                        }
+                        android.util.Log.e("AddToCart", "Failed: " + errorMsg);
+                        Toast.makeText(DetailProductActivity.this, errorMsg, Toast.LENGTH_LONG).show();
                     }
                 }
 
                 @Override
                 public void onFailure(Call<CartResponse> call, Throwable t) {
-                    // Vẫn thêm vào local cart nếu server lỗi
-                    CartManager.addToCart(currentProduct, quantity, safeColor, safeSize);
-                    Toast.makeText(DetailProductActivity.this, "Đã thêm vào giỏ hàng (offline)", Toast.LENGTH_SHORT).show();
+                    android.util.Log.e("AddToCart", "Network error: " + t.getMessage(), t);
+                    Toast.makeText(DetailProductActivity.this, "Lỗi kết nối: " + t.getMessage(), Toast.LENGTH_SHORT).show();
                 }
             });
         });

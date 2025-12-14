@@ -9,8 +9,6 @@ const router = express.Router();
 
 /**
  * Tạo đơn hàng mới (thanh toán)
- * Headers: Authorization: Bearer <token>
- * Body: { phone, address, note?, voucherId? }
  */
 router.post('/', verifyToken, async (req, res) => {
   try {
@@ -26,7 +24,6 @@ router.post('/', verifyToken, async (req, res) => {
     let orderItems = [];
     let totalAmount = 0;
 
-    // Luôn sử dụng items từ request body (không phụ thuộc vào giỏ hàng)
     if (!items || !Array.isArray(items) || items.length === 0) {
       console.log('Error: No items in request');
       return res.status(400).json({ message: 'Vui lòng gửi danh sách sản phẩm' });
@@ -38,8 +35,7 @@ router.post('/', verifyToken, async (req, res) => {
         console.log('Error: Invalid item data:', item);
         return res.status(400).json({ message: 'Thông tin sản phẩm không hợp lệ: thiếu productId, quantity hoặc price' });
       }
-      
-      // Kiểm tra sản phẩm có tồn tại không
+
       const product = await Product.findById(item.productId);
       if (!product) {
         console.log('Error: Product not found:', item.productId);
@@ -48,16 +44,19 @@ router.post('/', verifyToken, async (req, res) => {
 
       const itemTotal = item.price * item.quantity;
       totalAmount += itemTotal;
+
       orderItems.push({
         product: item.productId,
         quantity: item.quantity,
         price: item.price,
         color: item.color || 'Mặc định',
-        size: item.size || 'Free size'
+        size: item.size || 'Free size',
+        productName: product.name || '',
+        productImage: product.image || '',
+        productDescription: product.description || ''
       });
     }
 
-    // Tính giảm giá nếu có voucher
     let discountAmount = 0;
     if (voucherId) {
       const voucher = await Voucher.findById(voucherId);
@@ -95,7 +94,6 @@ router.post('/', verifyToken, async (req, res) => {
       address
     });
 
-    // Tạo đơn hàng và lưu vào MongoDB
     const order = await Order.create({
       user: userId,
       items: orderItems,
@@ -107,18 +105,14 @@ router.post('/', verifyToken, async (req, res) => {
       shippingAddress: address,
       note: note || '',
       voucher: voucherId || null,
-      paymentStatus: 'paid', // Mặc định là đã thanh toán
+      paymentStatus: 'paid',
       status: 'pending'
     });
 
-   // --- DÁN ĐOẠN NÀY VÀO ---
-    // Cập nhật stock và sold (Hỗ trợ cả sản phẩm thường và biến thể)
     for (const item of orderItems) {
       try {
-        const quantity = Math.abs(item.quantity); // Đảm bảo số lượng luôn dương để cộng trừ đúng
+        const quantity = Math.abs(item.quantity);
 
-        // TH1: Nếu item có màu và size (Sản phẩm có biến thể)
-        // Tìm đúng sản phẩm có chứa biến thể màu/size đó để trừ kho
         const updatedVariant = await Product.findOneAndUpdate(
           {
             _id: item.product,
@@ -127,17 +121,15 @@ router.post('/', verifyToken, async (req, res) => {
           },
           {
             $inc: {
-              "variants.$.stock": -quantity, // Trừ kho của biến thể
-              "variants.$.sold": quantity,   // Tăng đã bán của biến thể
-              "stock": -quantity,            // Trừ kho tổng (ở ngoài)
-              "sold": quantity               // Tăng đã bán tổng (ở ngoài)
+              "variants.$.stock": -quantity,
+              "variants.$.sold": quantity,
+              "stock": -quantity,
+              "sold": quantity
             }
           },
           { new: true }
         );
 
-        // TH2: Nếu không update được biến thể (do sp không có biến thể hoặc sai màu/size)
-        // Thì chỉ update Stock/Sold ở lớp ngoài cùng
         if (!updatedVariant) {
            await Product.findByIdAndUpdate(item.product, {
               $inc: {
@@ -162,30 +154,25 @@ router.post('/', verifyToken, async (req, res) => {
       console.log('⚠️ Lỗi khi xóa cart (không ảnh hưởng đến order):', cartError.message);
     }
 
-    // Populate order để trả về đầy đủ thông tin (không populate category để tránh lỗi parse)
     const populatedOrder = await Order.findById(order._id)
       .populate({
         path: 'items.product',
-        select: 'name price image stock colors sizes description', // Chỉ lấy các field cần thiết, không lấy category
+        select: 'name price image stock colors sizes description',
         populate: false
       })
       .populate('user', 'name email')
       .populate('voucher');
 
-    console.log('✅ Order populated successfully, sending response');
-
-    // Format response để đảm bảo user luôn là object (giống như admin/all route)
     const orderObj = populatedOrder.toObject({ getters: true, virtuals: false });
-    
-    // Đảm bảo user luôn là object với _id, name, email
+
     if (orderObj.user) {
       if (typeof orderObj.user === 'object' && orderObj.user._id) {
-        // Đã populated
+
         orderObj.user._id = orderObj.user._id.toString();
         orderObj.user.name = orderObj.user.name || null;
         orderObj.user.email = orderObj.user.email || null;
       } else {
-        // ObjectId hoặc string
+
         const userId = orderObj.user.toString ? orderObj.user.toString() : String(orderObj.user);
         orderObj.user = {
           _id: userId,
@@ -194,8 +181,7 @@ router.post('/', verifyToken, async (req, res) => {
         };
       }
     }
-    
-    // Convert dates
+
     if (orderObj.createdAt) {
       orderObj.createdAt = (orderObj.createdAt instanceof Date 
         ? orderObj.createdAt 
@@ -206,8 +192,7 @@ router.post('/', verifyToken, async (req, res) => {
         ? orderObj.updatedAt 
         : new Date(orderObj.updatedAt)).toISOString();
     }
-    
-    // Format items - convert product _id
+
     if (orderObj.items && Array.isArray(orderObj.items)) {
       orderObj.items = orderObj.items.map(item => {
         const itemObj = item.toObject ? item.toObject() : item;
@@ -235,8 +220,6 @@ router.post('/', verifyToken, async (req, res) => {
 
 /**
  * Lấy lịch sử đơn hàng của user
- * Headers: Authorization: Bearer <token>
- * Query: ?status=paid|unpaid (optional)
  */
 router.get('/', verifyToken, async (req, res) => {
   try {
@@ -251,29 +234,27 @@ router.get('/', verifyToken, async (req, res) => {
     const orders = await Order.find(query)
       .populate({
         path: 'items.product',
-        select: 'name price image stock colors sizes description', // Chỉ lấy các field cần thiết, không lấy category
-        populate: false
+        select: 'name price image stock colors sizes description isActive',
+        populate: false,
+
       })
       .populate('user', 'name email')
       .populate('voucher')
       .sort({ createdAt: -1 });
 
-    // Format response để đảm bảo user luôn là object (giống như admin/all route)
     const formattedOrders = orders.map(order => {
       const orderObj = order.toObject({ getters: true, virtuals: false });
-      
-      // Convert _id
+
       orderObj._id = orderObj._id.toString();
-      
-      // Đảm bảo user luôn là object với _id, name, email
+
       if (orderObj.user) {
         if (typeof orderObj.user === 'object' && orderObj.user._id) {
-          // Đã populated
+
           orderObj.user._id = orderObj.user._id.toString();
           orderObj.user.name = orderObj.user.name || null;
           orderObj.user.email = orderObj.user.email || null;
         } else {
-          // ObjectId hoặc string
+
           const userId = orderObj.user.toString ? orderObj.user.toString() : String(orderObj.user);
           orderObj.user = {
             _id: userId,
@@ -282,8 +263,7 @@ router.get('/', verifyToken, async (req, res) => {
           };
         }
       }
-      
-      // Convert dates
+
       if (orderObj.createdAt) {
         orderObj.createdAt = (orderObj.createdAt instanceof Date 
           ? orderObj.createdAt 
@@ -294,14 +274,48 @@ router.get('/', verifyToken, async (req, res) => {
           ? orderObj.updatedAt 
           : new Date(orderObj.updatedAt)).toISOString();
       }
-      
-      // Format items - convert product _id
+
       if (orderObj.items && Array.isArray(orderObj.items)) {
         orderObj.items = orderObj.items.map(item => {
           const itemObj = item.toObject ? item.toObject() : item;
-          if (itemObj.product && typeof itemObj.product === 'object' && itemObj.product._id) {
-            itemObj.product._id = itemObj.product._id.toString();
+
+          if (!itemObj.product || (itemObj.product && !itemObj.product.name)) {
+
+            if (itemObj.productName) {
+              itemObj.product = {
+                _id: itemObj.product ? (typeof itemObj.product === 'object' ? itemObj.product._id?.toString() : itemObj.product.toString()) : null,
+                name: itemObj.productName || 'Sản phẩm đã bị xóa',
+                price: itemObj.price || 0,
+                image: itemObj.productImage || '',
+                description: itemObj.productDescription || '',
+                stock: 0,
+                colors: [],
+                sizes: []
+              };
+            } else {
+
+              itemObj.product = {
+                _id: itemObj.product ? (typeof itemObj.product === 'object' ? itemObj.product._id?.toString() : itemObj.product.toString()) : null,
+                name: 'Sản phẩm đã bị xóa',
+                price: itemObj.price || 0,
+                image: '',
+                description: '',
+                stock: 0,
+                colors: [],
+                sizes: []
+              };
+            }
+          } else {
+
+            if (itemObj.product && typeof itemObj.product === 'object' && itemObj.product._id) {
+              itemObj.product._id = itemObj.product._id.toString();
+            }
+
+            itemObj.product.name = itemObj.product.name || itemObj.productName || 'Sản phẩm';
+            itemObj.product.image = itemObj.product.image || itemObj.productImage || '';
+            itemObj.product.description = itemObj.product.description || itemObj.productDescription || '';
           }
+          
           return itemObj;
         });
       }
@@ -315,13 +329,8 @@ router.get('/', verifyToken, async (req, res) => {
   }
 });
 
-// ================== API THỐNG KÊ DOANH THU - PHẢI ĐẶT TRƯỚC /:id ==================
 /**
- * GET /api/orders/revenue?startDate=2025-1-4&endDate=2025-1-31
- * KHÔNG CẦN TOKEN - PUBLIC API
- * Chỉ tính các đơn đã thanh toán và chưa bị hủy
- * Định dạng ngày: YYYY-M-D (ví dụ: 2025-1-4)
- * Trả về doanh thu theo từng category
+ * Thống kê doanh thu
  */
 router.get('/revenue', async (req, res) => {
     console.log('📊 Revenue API called:', { startDate: req.query.startDate, endDate: req.query.endDate });
@@ -329,7 +338,6 @@ router.get('/revenue', async (req, res) => {
     try {
         const { startDate, endDate } = req.query;
 
-        // Chỉ lấy đơn đã thanh toán và chưa bị hủy
         let query = { 
             paymentStatus: 'paid',
             status: { $ne: 'cancelled' }
@@ -337,12 +345,12 @@ router.get('/revenue', async (req, res) => {
 
         if (startDate && endDate) {
             try {
-                // Parse ngày từ format YYYY-M-D
+
                 const parseDate = (dateStr) => {
                     const parts = dateStr.split('-');
                     if (parts.length === 3) {
                         const year = parseInt(parts[0], 10);
-                        const month = parseInt(parts[1], 10) - 1; // Month is 0-indexed
+                        const month = parseInt(parts[1], 10) - 1;
                         const day = parseInt(parts[2], 10);
                         const date = new Date(year, month, day);
                         if (isNaN(date.getTime())) {
@@ -353,11 +361,9 @@ router.get('/revenue', async (req, res) => {
                     throw new Error('Invalid date format');
                 };
 
-                // Tạo ngày BẮT ĐẦU từ 00:00:00 của startDate
                 const startOfDay = parseDate(startDate);
                 startOfDay.setHours(0, 0, 0, 0);
 
-                // Tạo ngày KẾT THÚC từ 00:00:00 của ngày TIẾP THEO sau endDate
                 const end = parseDate(endDate);
                 const nextDay = new Date(end);
                 nextDay.setDate(end.getDate() + 1);
@@ -371,7 +377,7 @@ router.get('/revenue', async (req, res) => {
                 console.log(`📅 Filtering orders from ${startOfDay.toISOString()} to before ${nextDay.toISOString()}`);
             } catch (dateError) {
                 console.error('❌ Lỗi parse ngày:', dateError);
-                return res.status(400).json({ 
+                                return res.status(400).json({ 
                     message: "Định dạng ngày không hợp lệ. Vui lòng sử dụng format: YYYY-M-D (ví dụ: 2025-1-4)",
                     error: dateError.message 
                 });
@@ -380,11 +386,9 @@ router.get('/revenue', async (req, res) => {
             console.log('📊 Fetching all paid and non-cancelled orders (no date filter)');
         }
 
-        // Lấy tất cả categories trong hệ thống
         const allCategories = await Category.find().select('_id name');
         console.log(`📋 Found ${allCategories.length} categories in system`);
 
-        // Lấy orders và populate items.product để có category
         const orders = await Order.find(query)
             .populate({
                 path: 'items.product',
@@ -397,7 +401,6 @@ router.get('/revenue', async (req, res) => {
         
         console.log(`📦 Found ${orders.length} orders matching criteria`);
 
-        // Khởi tạo Map với tất cả categories (doanh thu = 0)
         const categoryRevenueMap = new Map();
         allCategories.forEach(cat => {
             categoryRevenueMap.set(cat._id.toString(), {
@@ -407,45 +410,39 @@ router.get('/revenue', async (req, res) => {
             });
         });
 
-        // Tính doanh thu theo từng category từ orders
-        // Sử dụng finalAmount (sau giảm giá) thay vì totalAmount
         let itemsWithoutCategory = 0;
 
         orders.forEach(order => {
             if (order.paymentStatus === 'paid' && order.status !== 'cancelled') {
-                // Tính tổng giá trị gốc của order (trước giảm giá)
+
                 const orderTotalAmount = order.totalAmount || 0;
-                // Lấy giá trị thực tế sau giảm giá
+
                 const orderFinalAmount = order.finalAmount || 0;
-                
-                // Tính tỷ lệ giảm giá (nếu có)
-                // Nếu totalAmount = 0 thì không có giảm giá
+
                 const discountRatio = orderTotalAmount > 0 ? (orderFinalAmount / orderTotalAmount) : 1;
-                
-                // Tính doanh thu của từng item trong order (sau giảm giá)
+
                 order.items.forEach(item => {
                     if (item.product) {
-                        // Kiểm tra nếu product có category
+
                         let categoryId = null;
                         
                         if (item.product.category) {
-                            // Nếu category là object (đã populate)
+
                             if (typeof item.product.category === 'object' && item.product.category._id) {
                                 categoryId = item.product.category._id.toString();
                             } 
-                            // Nếu category là ObjectId (chưa populate)
+
                             else if (item.product.category.toString) {
                                 categoryId = item.product.category.toString();
                             }
                         } else {
                             itemsWithoutCategory++;
                         }
-                        
-                        // Chỉ tính doanh thu nếu category tồn tại trong hệ thống
+
                         if (categoryId && categoryRevenueMap.has(categoryId)) {
-                            // Tính giá trị gốc của item
+
                             const itemOriginalValue = (item.price || 0) * (item.quantity || 0);
-                            // Áp dụng tỷ lệ giảm giá để có giá trị thực tế (sau giảm giá)
+
                             const itemRevenue = itemOriginalValue * discountRatio;
                             
                             const existing = categoryRevenueMap.get(categoryId);
@@ -460,17 +457,14 @@ router.get('/revenue', async (req, res) => {
             console.log(`⚠️ Warning: ${itemsWithoutCategory} items without category`);
         }
 
-        // Chuyển Map thành Array và sắp xếp theo revenue giảm dần
         const categoryRevenue = Array.from(categoryRevenueMap.values())
             .sort((a, b) => b.revenue - a.revenue);
 
-        // Tính tổng doanh thu
         const totalRevenue = categoryRevenue.reduce((sum, cat) => sum + cat.revenue, 0);
         const totalOrders = orders.length;
 
         console.log(`✅ Revenue stats: ${totalOrders} orders, ${totalRevenue} total revenue, ${categoryRevenue.length} categories`);
         
-        // Log chi tiết category revenue để debug
         if (categoryRevenue.length > 0) {
             console.log('📊 Category Revenue Details:');
             categoryRevenue.forEach(cat => {
@@ -480,10 +474,74 @@ router.get('/revenue', async (req, res) => {
             console.log('⚠️ No category revenue found!');
         }
 
+        const Product = require('../models/Product');
+
+        let productQuery = {};
+
+        const allProducts = await Product.find({})
+            .select('_id name sold price')
+            .sort({ sold: -1 })
+            .limit(10);
+
+        const topProducts = await Promise.all(allProducts.map(async (product) => {
+
+            let productRevenue = 0;
+            let productQuantity = 0;
+            
+            orders.forEach(order => {
+                if (order.paymentStatus === 'paid' && order.status !== 'cancelled') {
+                    const orderTotalAmount = order.totalAmount || 0;
+                    const orderFinalAmount = order.finalAmount || 0;
+                    const discountRatio = orderTotalAmount > 0 ? (orderFinalAmount / orderTotalAmount) : 1;
+                    
+                    order.items.forEach(item => {
+                        let itemProductId = null;
+                        if (item.product) {
+                            if (typeof item.product === 'object' && item.product._id) {
+                                itemProductId = item.product._id.toString();
+                            } else if (item.product.toString && typeof item.product.toString === 'function') {
+                                itemProductId = item.product.toString();
+                            } else {
+                                itemProductId = String(item.product);
+                            }
+                        }
+                        
+                        const productIdStr = product._id.toString();
+                        if (itemProductId === productIdStr) {
+                            const quantity = item.quantity || 0;
+                            const itemPrice = item.price || 0;
+                            productQuantity += quantity;
+                            productRevenue += (itemPrice * quantity) * discountRatio;
+                        }
+                    });
+                }
+            });
+            
+            return {
+                productId: product._id.toString(),
+                productName: product.name,
+                quantity: product.sold || 0,
+                revenue: productRevenue
+            };
+        }));
+
+        topProducts.sort((a, b) => b.quantity - a.quantity);
+        
+        console.log(`📊 Top Products: Found ${topProducts.length} products (based on 'sold' field)`);
+        if (topProducts.length > 0) {
+            console.log('Top Products Details:');
+            topProducts.forEach((p, index) => {
+                console.log(`  ${index + 1}. ${p.productName} - Sold: ${p.quantity}, Revenue: ${p.revenue}`);
+            });
+        } else {
+            console.log('⚠️ No top products found!');
+        }
+
         res.status(200).json({
             totalOrders: totalOrders,
             totalRevenue: totalRevenue,
-            categoryRevenue: categoryRevenue
+            categoryRevenue: categoryRevenue,
+            topProducts: topProducts
         });
 
     } catch (err) {
@@ -497,7 +555,6 @@ router.get('/revenue', async (req, res) => {
 
 /**
  * Lấy chi tiết đơn hàng
- * Headers: Authorization: Bearer <token>
  */
 router.get('/:id', verifyToken, async (req, res) => {
   try {
@@ -507,8 +564,9 @@ router.get('/:id', verifyToken, async (req, res) => {
     const order = await Order.findOne({ _id: orderId, user: userId })
       .populate({
         path: 'items.product',
-        select: 'name price image stock colors sizes description',
-        populate: false
+        select: 'name price image stock colors sizes description isActive',
+        populate: false,
+
       })
       .populate('user', 'name email')
       .populate('voucher');
@@ -517,18 +575,16 @@ router.get('/:id', verifyToken, async (req, res) => {
       return res.status(404).json({ message: 'Không tìm thấy đơn hàng' });
     }
 
-    // Format response để đảm bảo user luôn là object
     const orderObj = order.toObject({ getters: true, virtuals: false });
-    
-    // Đảm bảo user luôn là object với _id, name, email
+
     if (orderObj.user) {
       if (typeof orderObj.user === 'object' && orderObj.user._id) {
-        // Đã populated
+
         orderObj.user._id = orderObj.user._id.toString();
         orderObj.user.name = orderObj.user.name || null;
         orderObj.user.email = orderObj.user.email || null;
       } else {
-        // ObjectId hoặc string
+
         const userId = orderObj.user.toString ? orderObj.user.toString() : String(orderObj.user);
         orderObj.user = {
           _id: userId,
@@ -537,8 +593,7 @@ router.get('/:id', verifyToken, async (req, res) => {
         };
       }
     }
-    
-    // Convert dates
+
     if (orderObj.createdAt) {
       orderObj.createdAt = (orderObj.createdAt instanceof Date 
         ? orderObj.createdAt 
@@ -549,14 +604,48 @@ router.get('/:id', verifyToken, async (req, res) => {
         ? orderObj.updatedAt 
         : new Date(orderObj.updatedAt)).toISOString();
     }
-    
-    // Format items - convert product _id
+
     if (orderObj.items && Array.isArray(orderObj.items)) {
       orderObj.items = orderObj.items.map(item => {
         const itemObj = item.toObject ? item.toObject() : item;
-        if (itemObj.product && typeof itemObj.product === 'object' && itemObj.product._id) {
-          itemObj.product._id = itemObj.product._id.toString();
+
+        if (!itemObj.product || (itemObj.product && !itemObj.product.name)) {
+
+          if (itemObj.productName) {
+            itemObj.product = {
+              _id: itemObj.product ? (typeof itemObj.product === 'object' ? itemObj.product._id?.toString() : itemObj.product.toString()) : null,
+              name: itemObj.productName || 'Sản phẩm đã bị xóa',
+              price: itemObj.price || 0,
+              image: itemObj.productImage || '',
+              description: itemObj.productDescription || '',
+              stock: 0,
+              colors: [],
+              sizes: []
+            };
+          } else {
+
+            itemObj.product = {
+              _id: itemObj.product ? (typeof itemObj.product === 'object' ? itemObj.product._id?.toString() : itemObj.product.toString()) : null,
+              name: 'Sản phẩm đã bị xóa',
+              price: itemObj.price || 0,
+              image: '',
+              description: '',
+              stock: 0,
+              colors: [],
+              sizes: []
+            };
+          }
+        } else {
+
+          if (itemObj.product && typeof itemObj.product === 'object' && itemObj.product._id) {
+            itemObj.product._id = itemObj.product._id.toString();
+          }
+
+          itemObj.product.name = itemObj.product.name || itemObj.productName || 'Sản phẩm';
+          itemObj.product.image = itemObj.product.image || itemObj.productImage || '';
+          itemObj.product.description = itemObj.product.description || itemObj.productDescription || '';
         }
+        
         return itemObj;
       });
     }
@@ -569,8 +658,6 @@ router.get('/:id', verifyToken, async (req, res) => {
 
 /**
  * Admin lấy tất cả đơn hàng
- * Headers: Authorization: Bearer <token>
- * Query: ?status=pending|processing|shipped|delivered|cancelled (optional)
  */
 router.get('/admin/all', verifyToken, requireAdmin, async (req, res) => {
   try {
@@ -597,22 +684,19 @@ router.get('/admin/all', verifyToken, requireAdmin, async (req, res) => {
 
     console.log('📦 Found', orders.length, 'orders in database');
     
-    // Format response - đơn giản và nhất quán cho Android
     const formattedOrders = orders.map(order => {
       const orderObj = order.toObject({ getters: true, virtuals: false });
-      
-      // Convert _id
+
       orderObj._id = orderObj._id.toString();
-      
-      // Đảm bảo user luôn là object với _id, name, email
+
       if (orderObj.user) {
         if (typeof orderObj.user === 'object' && orderObj.user._id) {
-          // Đã populated
+
           orderObj.user._id = orderObj.user._id.toString();
           orderObj.user.name = orderObj.user.name || null;
           orderObj.user.email = orderObj.user.email || null;
         } else {
-          // ObjectId hoặc string
+
           const userId = orderObj.user.toString ? orderObj.user.toString() : String(orderObj.user);
           orderObj.user = {
             _id: userId,
@@ -621,8 +705,7 @@ router.get('/admin/all', verifyToken, requireAdmin, async (req, res) => {
           };
         }
       }
-      
-      // Convert dates
+
       if (orderObj.createdAt) {
         orderObj.createdAt = (orderObj.createdAt instanceof Date 
           ? orderObj.createdAt 
@@ -633,8 +716,7 @@ router.get('/admin/all', verifyToken, requireAdmin, async (req, res) => {
           ? orderObj.updatedAt 
           : new Date(orderObj.updatedAt)).toISOString();
       }
-      
-      // Format items - convert product _id
+
       if (orderObj.items && Array.isArray(orderObj.items)) {
         orderObj.items = orderObj.items.map(item => {
           const itemObj = item.toObject ? item.toObject() : item;
@@ -662,16 +744,14 @@ router.get('/admin/all', verifyToken, requireAdmin, async (req, res) => {
 
 /**
  * Admin cập nhật trạng thái đơn hàng
- * Headers: Authorization: Bearer <token>
- * Body: { status: 'pending'|'processing'|'shipped'|'delivered'|'cancelled' }
  */
 router.put('/:id/status', verifyToken, requireAdmin, async (req, res) => {
   try {
     const orderId = req.params.id;
     const { status } = req.body;
 
-    if (!status || !['pending', 'processing', 'shipped', 'delivered', 'cancelled'].includes(status)) {
-      return res.status(400).json({ message: 'Trạng thái không hợp lệ' });
+    if (!status || !['pending', 'shipped', 'delivered'].includes(status)) {
+      return res.status(400).json({ message: 'Trạng thái không hợp lệ. Chỉ cho phép: Chờ xác nhận, Đang giao, Hoàn thành' });
     }
 
     const order = await Order.findById(orderId);
@@ -679,7 +759,22 @@ router.put('/:id/status', verifyToken, requireAdmin, async (req, res) => {
       return res.status(404).json({ message: 'Không tìm thấy đơn hàng' });
     }
 
-    // Nếu hủy đơn, cần hoàn trả stock
+    if (order.status === 'delivered' || order.status === 'cancelled') {
+      return res.status(400).json({ message: 'Không thể cập nhật đơn hàng đã hoàn thành hoặc đã hủy' });
+    }
+
+    if (order.status === 'pending' && status !== 'shipped') {
+      return res.status(400).json({ message: 'Từ "Chờ xác nhận" chỉ có thể chuyển đến "Đang giao"' });
+    }
+
+    if (order.status === 'shipped' && status !== 'delivered') {
+      return res.status(400).json({ message: 'Từ "Đang giao" chỉ có thể chuyển đến "Hoàn thành"' });
+    }
+
+    if (status === 'cancelled') {
+      return res.status(400).json({ message: 'Không thể hủy đơn hàng từ đây. Người dùng sẽ tự hủy.' });
+    }
+
     if (status === 'cancelled' && order.status !== 'cancelled') {
       for (const item of order.items) {
         try {
@@ -719,7 +814,6 @@ router.put('/:id/status', verifyToken, requireAdmin, async (req, res) => {
     order.updatedAt = new Date();
     await order.save();
 
-    // Populate và format response
     const populatedOrder = await Order.findById(order._id)
       .populate({
         path: 'items.product',
@@ -730,8 +824,7 @@ router.put('/:id/status', verifyToken, requireAdmin, async (req, res) => {
       .populate('voucher');
 
     const orderObj = populatedOrder.toObject({ getters: true, virtuals: false });
-    
-    // Format user
+
     if (orderObj.user) {
       if (typeof orderObj.user === 'object' && orderObj.user._id) {
         orderObj.user._id = orderObj.user._id.toString();
@@ -746,8 +839,7 @@ router.put('/:id/status', verifyToken, requireAdmin, async (req, res) => {
         };
       }
     }
-    
-    // Convert dates
+
     if (orderObj.createdAt) {
       orderObj.createdAt = (orderObj.createdAt instanceof Date 
         ? orderObj.createdAt 
@@ -758,8 +850,7 @@ router.put('/:id/status', verifyToken, requireAdmin, async (req, res) => {
         ? orderObj.updatedAt 
         : new Date(orderObj.updatedAt)).toISOString();
     }
-    
-    // Format items
+
     if (orderObj.items && Array.isArray(orderObj.items)) {
       orderObj.items = orderObj.items.map(item => {
         const itemObj = item.toObject ? item.toObject() : item;
@@ -779,8 +870,6 @@ router.put('/:id/status', verifyToken, requireAdmin, async (req, res) => {
 
 /**
  * Admin cập nhật toàn bộ thông tin đơn hàng
- * Headers: Authorization: Bearer <token>
- * Body: { receiverName?, phone?, shippingAddress?, note?, status?, paymentStatus? }
  */
 router.put('/:id', verifyToken, requireAdmin, async (req, res) => {
   try {
@@ -792,19 +881,16 @@ router.put('/:id', verifyToken, requireAdmin, async (req, res) => {
       return res.status(404).json({ message: 'Không tìm thấy đơn hàng' });
     }
 
-    // Validate status nếu có
     if (status && !['pending', 'processing', 'shipped', 'delivered', 'cancelled'].includes(status)) {
       return res.status(400).json({ message: 'Trạng thái không hợp lệ' });
     }
 
-    // Validate paymentStatus nếu có
     if (paymentStatus && !['paid', 'unpaid'].includes(paymentStatus)) {
       return res.status(400).json({ message: 'Trạng thái thanh toán không hợp lệ' });
     }
 
     const oldStatus = order.status;
 
-    // Cập nhật các field nếu có trong request
     if (receiverName !== undefined) order.receiverName = receiverName;
     if (phone !== undefined) order.phone = phone;
     if (shippingAddress !== undefined) order.shippingAddress = shippingAddress;
@@ -812,7 +898,6 @@ router.put('/:id', verifyToken, requireAdmin, async (req, res) => {
     if (status !== undefined) order.status = status;
     if (paymentStatus !== undefined) order.paymentStatus = paymentStatus;
 
-    // Nếu hủy đơn, cần hoàn trả stock
     if (status === 'cancelled' && oldStatus !== 'cancelled') {
       for (const item of order.items) {
         try {
@@ -848,7 +933,6 @@ router.put('/:id', verifyToken, requireAdmin, async (req, res) => {
       }
     }
 
-    // Nếu đơn từ cancelled chuyển sang trạng thái khác, trừ lại stock
     if (oldStatus === 'cancelled' && status && status !== 'cancelled') {
       for (const item of order.items) {
         try {
@@ -887,7 +971,6 @@ router.put('/:id', verifyToken, requireAdmin, async (req, res) => {
     order.updatedAt = new Date();
     await order.save();
 
-    // Populate và format response
     const populatedOrder = await Order.findById(order._id)
       .populate({
         path: 'items.product',
@@ -898,8 +981,7 @@ router.put('/:id', verifyToken, requireAdmin, async (req, res) => {
       .populate('voucher');
 
     const orderObj = populatedOrder.toObject({ getters: true, virtuals: false });
-    
-    // Format user
+
     if (orderObj.user) {
       if (typeof orderObj.user === 'object' && orderObj.user._id) {
         orderObj.user._id = orderObj.user._id.toString();
@@ -914,8 +996,7 @@ router.put('/:id', verifyToken, requireAdmin, async (req, res) => {
         };
       }
     }
-    
-    // Convert dates
+
     if (orderObj.createdAt) {
       orderObj.createdAt = (orderObj.createdAt instanceof Date 
         ? orderObj.createdAt 
@@ -926,8 +1007,7 @@ router.put('/:id', verifyToken, requireAdmin, async (req, res) => {
         ? orderObj.updatedAt 
         : new Date(orderObj.updatedAt)).toISOString();
     }
-    
-    // Format items
+
     if (orderObj.items && Array.isArray(orderObj.items)) {
       orderObj.items = orderObj.items.map(item => {
         const itemObj = item.toObject ? item.toObject() : item;
@@ -947,12 +1027,12 @@ router.put('/:id', verifyToken, requireAdmin, async (req, res) => {
 
 /**
  * Hủy đơn hàng
- * Headers: Authorization: Bearer <token>
  */
 router.put('/:id/cancel', verifyToken, async (req, res) => {
   try {
     const userId = req.user.id;
     const orderId = req.params.id;
+    const { cancelReason } = req.body;
 
     const order = await Order.findOne({ _id: orderId, user: userId });
 
@@ -960,17 +1040,14 @@ router.put('/:id/cancel', verifyToken, async (req, res) => {
       return res.status(404).json({ message: 'Không tìm thấy đơn hàng' });
     }
 
-    // Chỉ cho phép hủy đơn hàng nếu đang ở trạng thái chờ xác nhận
     if (order.status !== 'pending') {
       return res.status(400).json({ message: 'Chỉ có thể hủy đơn hàng đang chờ xác nhận' });
     }
 
-    // Cập nhật stock và sold khi hủy đơn
     for (const item of order.items) {
       try {
         const quantity = Math.abs(item.quantity);
 
-        // Tìm và cập nhật biến thể nếu có
         const updatedVariant = await Product.findOneAndUpdate(
           {
             _id: item.product,
@@ -988,7 +1065,6 @@ router.put('/:id/cancel', verifyToken, async (req, res) => {
           { new: true }
         );
 
-        // Nếu không có biến thể, chỉ cập nhật stock/sold ở ngoài
         if (!updatedVariant) {
           await Product.findByIdAndUpdate(item.product, {
             $inc: {
@@ -1002,8 +1078,10 @@ router.put('/:id/cancel', verifyToken, async (req, res) => {
       }
     }
 
-    // Cập nhật trạng thái đơn hàng thành cancelled
     order.status = 'cancelled';
+    if (cancelReason && cancelReason.trim()) {
+      order.cancelReason = cancelReason.trim();
+    }
     order.updatedAt = new Date();
     await order.save();
 

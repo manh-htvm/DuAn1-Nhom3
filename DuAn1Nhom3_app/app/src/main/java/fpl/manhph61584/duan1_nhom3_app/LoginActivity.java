@@ -20,6 +20,10 @@ import retrofit2.Call;
 import retrofit2.Callback;
 import retrofit2.Response;
 
+import java.util.regex.Pattern;
+import com.google.gson.JsonObject;
+import com.google.gson.Gson;
+
 public class LoginActivity extends AppCompatActivity {
 
     private EditText edtUsername, edtPassword;
@@ -42,17 +46,13 @@ public class LoginActivity extends AppCompatActivity {
         checkboxRememberMe = findViewById(R.id.checkboxRememberMe);
         apiService = ApiClient.getApiService();
 
-        // Khôi phục email đã lưu
         String savedEmail = UserManager.getSavedEmail(this);
         if (!savedEmail.isEmpty()) {
             edtUsername.setText(savedEmail);
             checkboxRememberMe.setChecked(true);
         }
 
-        // Kiểm tra nếu đã đăng nhập (remember me)
         if (UserManager.restoreSession(this)) {
-            // Đã có session, chuyển thẳng đến MainActivity
-            android.util.Log.d("LoginActivity", "✅ Session restored, redirecting to MainActivity");
             Intent intent = new Intent(this, MainActivity.class);
             startActivity(intent);
             finish();
@@ -76,6 +76,11 @@ public class LoginActivity extends AppCompatActivity {
             return;
         }
 
+        if (!isValidEmail(email)) {
+            Toast.makeText(this, "Email không đúng định dạng", Toast.LENGTH_SHORT).show();
+            return;
+        }
+
         setLoading(true);
         apiService.login(new LoginRequest(email, pass)).enqueue(new Callback<LoginResponse>() {
             @Override
@@ -83,51 +88,34 @@ public class LoginActivity extends AppCompatActivity {
                 setLoading(false);
                 if (response.isSuccessful() && response.body() != null) {
                     LoginResponse body = response.body();
-                    
-                    // Log chi tiết response
-                    android.util.Log.d("LoginActivity", "=== LOGIN RESPONSE ===");
-                    android.util.Log.d("LoginActivity", "Token: " + (body.getToken() != null ? body.getToken().substring(0, Math.min(20, body.getToken().length())) + "..." : "null"));
-                    
-                    if (body.getUser() != null) {
-                        android.util.Log.d("LoginActivity", "User object:");
-                        android.util.Log.d("LoginActivity", "  - ID: " + body.getUser().getId());
-                        android.util.Log.d("LoginActivity", "  - Email: " + body.getUser().getEmail());
-                        android.util.Log.d("LoginActivity", "  - Name: " + body.getUser().getName());
-                        android.util.Log.d("LoginActivity", "  - Role: " + body.getUser().getRole());
-                    } else {
-                        android.util.Log.e("LoginActivity", "❌ User object is null in response!");
-                    }
-                    
-                    // Lưu session với remember me
                     boolean rememberMe = checkboxRememberMe.isChecked();
                     UserManager.saveSession(body.getUser(), body.getToken(), LoginActivity.this, rememberMe);
                     
-                    // Verify saved session
-                    fpl.manhph61584.duan1_nhom3_app.network.dto.UserDto savedUser = UserManager.getCurrentUser();
-                    if (savedUser != null) {
-                        android.util.Log.d("LoginActivity", "✅ Session saved - Role: " + savedUser.getRole() + ", Remember Me: " + rememberMe);
-                    } else {
-                        android.util.Log.e("LoginActivity", "❌ Failed to save session!");
-                    }
-                    
                     Toast.makeText(LoginActivity.this, "Đăng nhập thành công!", Toast.LENGTH_SHORT).show();
-                    
-                    // Luôn chuyển đến MainActivity (chỉ dành cho khách hàng)
                     Intent intent = new Intent(LoginActivity.this, MainActivity.class);
                     startActivity(intent);
                     overridePendingTransition(R.anim.slide_in_left, R.anim.slide_out_right);
                     finish();
                 } else {
-                    android.util.Log.e("LoginActivity", "❌ Login failed - Response code: " + response.code());
-                    if (response.errorBody() != null) {
+                    String errorMsg = "Sai email hoặc mật khẩu!";
+                    if (response.code() == 403) {
+                        errorMsg = "Tài khoản của bạn đã bị khóa. Vui lòng liên hệ quản trị viên.";
+                    } else if (response.errorBody() != null) {
                         try {
                             String errorStr = response.errorBody().string();
-                            android.util.Log.e("LoginActivity", "Error body: " + errorStr);
+                            try {
+                                JsonObject jsonObject = new Gson().fromJson(errorStr, JsonObject.class);
+                                if (jsonObject.has("message")) {
+                                    errorMsg = jsonObject.get("message").getAsString();
+                                }
+                            } catch (Exception e) {
+                                errorMsg = errorStr;
+                            }
                         } catch (Exception e) {
-                            android.util.Log.e("LoginActivity", "Error reading error body", e);
+                            errorMsg = "Lỗi đăng nhập: " + response.message();
                         }
                     }
-                    Toast.makeText(LoginActivity.this, "Sai email hoặc mật khẩu!", Toast.LENGTH_SHORT).show();
+                    Toast.makeText(LoginActivity.this, errorMsg, Toast.LENGTH_LONG).show();
                 }
             }
 
@@ -143,5 +131,10 @@ public class LoginActivity extends AppCompatActivity {
         loginProgress.setVisibility(loading ? View.VISIBLE : View.GONE);
         btnLogin.setEnabled(!loading);
         tvRegister.setEnabled(!loading);
+    }
+
+    private boolean isValidEmail(String email) {
+        String emailPattern = "^[A-Za-z0-9+_.-]+@[A-Za-z0-9.-]+\\.[A-Za-z]{2,}$";
+        return Pattern.matches(emailPattern, email);
     }
 }

@@ -8,6 +8,8 @@ import android.view.ViewGroup;
 import android.widget.Button;
 import android.widget.EditText;
 import android.widget.ImageView;
+import android.widget.RadioButton;
+import android.widget.RadioGroup;
 import android.widget.TextView;
 import android.widget.Toast;
 
@@ -187,20 +189,59 @@ public class OrderHistoryAdapter extends RecyclerView.Adapter<OrderHistoryAdapte
             btnCancelOrder.setOnClickListener(v -> {
                 if (context instanceof android.app.Activity) {
                     android.app.Activity activity = (android.app.Activity) context;
-                    new android.app.AlertDialog.Builder(activity)
-                        .setTitle("Xác nhận hủy đơn")
-                        .setMessage("Bạn có chắc chắn muốn hủy đơn hàng này?")
-                        .setPositiveButton("Hủy đơn", (dialog, which) -> {
-                            adapter.cancelOrder(order.getId(), activity);
-                        })
-                        .setNegativeButton("Không", null)
-                        .show();
+                    adapter.showCancelOrderDialog(order.getId(), activity);
                 }
             });
         }
     }
 
-    private void cancelOrder(String orderId, android.app.Activity activity) {
+    private void showCancelOrderDialog(String orderId, android.app.Activity activity) {
+        android.app.AlertDialog.Builder builder = new android.app.AlertDialog.Builder(activity);
+        View dialogView = LayoutInflater.from(activity).inflate(R.layout.dialog_cancel_order, null);
+        builder.setView(dialogView);
+        builder.setTitle("Hủy đơn hàng");
+
+        android.widget.RadioGroup radioGroup = dialogView.findViewById(R.id.radioGroupCancelReason);
+        android.widget.RadioButton radioChangeMind = dialogView.findViewById(R.id.radioChangeMind);
+        android.widget.RadioButton radioWrongProduct = dialogView.findViewById(R.id.radioWrongProduct);
+        android.widget.RadioButton radioFoundCheaper = dialogView.findViewById(R.id.radioFoundCheaper);
+        android.widget.RadioButton radioOther = dialogView.findViewById(R.id.radioOther);
+        android.widget.EditText edtOtherReason = dialogView.findViewById(R.id.edtOtherReason);
+
+        // Hiển thị EditText khi chọn "Khác"
+        radioOther.setOnCheckedChangeListener((buttonView, isChecked) -> {
+            edtOtherReason.setVisibility(isChecked ? View.VISIBLE : View.GONE);
+        });
+
+        builder.setPositiveButton("Xác nhận hủy", (dialog, which) -> {
+            int selectedId = radioGroup.getCheckedRadioButtonId();
+            String cancelReason = "";
+
+            if (selectedId == R.id.radioChangeMind) {
+                cancelReason = "Thay đổi ý định";
+            } else if (selectedId == R.id.radioWrongProduct) {
+                cancelReason = "Đặt nhầm sản phẩm";
+            } else if (selectedId == R.id.radioFoundCheaper) {
+                cancelReason = "Tìm thấy sản phẩm rẻ hơn";
+            } else if (selectedId == R.id.radioOther) {
+                cancelReason = edtOtherReason.getText().toString().trim();
+                if (cancelReason.isEmpty()) {
+                    Toast.makeText(activity, "Vui lòng nhập lý do hủy đơn", Toast.LENGTH_SHORT).show();
+                    return;
+                }
+            } else {
+                Toast.makeText(activity, "Vui lòng chọn lý do hủy đơn", Toast.LENGTH_SHORT).show();
+                return;
+            }
+
+            cancelOrder(orderId, cancelReason, activity);
+        });
+
+        builder.setNegativeButton("Hủy", null);
+        builder.show();
+    }
+
+    private void cancelOrder(String orderId, String cancelReason, android.app.Activity activity) {
         String token = UserManager.getAuthToken();
         if (token == null) {
             Toast.makeText(activity, "Vui lòng đăng nhập", Toast.LENGTH_SHORT).show();
@@ -208,7 +249,10 @@ public class OrderHistoryAdapter extends RecyclerView.Adapter<OrderHistoryAdapte
         }
 
         String authHeader = "Bearer " + token;
-        ApiClient.getApiService().cancelOrder(authHeader, orderId).enqueue(new Callback<OrderDto>() {
+        fpl.manhph61584.duan1_nhom3_app.network.dto.CancelOrderRequest request = 
+            new fpl.manhph61584.duan1_nhom3_app.network.dto.CancelOrderRequest(cancelReason);
+        
+        ApiClient.getApiService().cancelOrder(authHeader, orderId, request).enqueue(new Callback<OrderDto>() {
             @Override
             public void onResponse(Call<OrderDto> call, Response<OrderDto> response) {
                 if (response.isSuccessful()) {

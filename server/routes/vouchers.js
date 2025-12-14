@@ -5,15 +5,12 @@ const router = express.Router();
 
 /**
  * Lấy danh sách vouchers active
- * - Nếu đã đăng nhập (có token): lấy cả vouchers của user và vouchers public
- * - Nếu chưa đăng nhập: chỉ lấy vouchers public
  */
 router.get('/', async (req, res) => {
   try {
     const authHeader = req.headers.authorization;
     let userId = null;
 
-    // Nếu có token, lấy userId
     if (authHeader && authHeader.startsWith('Bearer ')) {
       try {
         const jwt = require('jsonwebtoken');
@@ -22,7 +19,7 @@ router.get('/', async (req, res) => {
         const decoded = jwt.verify(token, JWT_SECRET);
         userId = decoded.id;
       } catch (err) {
-        // Token không hợp lệ, coi như chưa đăng nhập
+
       }
     }
 
@@ -33,8 +30,6 @@ router.get('/', async (req, res) => {
       endDate: { $gte: now }
     };
 
-    // Nếu có userId, lấy cả vouchers của user và vouchers public
-    // Nếu không có, chỉ lấy vouchers public
     if (userId) {
       query.$or = [
         { user: userId },
@@ -46,7 +41,6 @@ router.get('/', async (req, res) => {
 
     const vouchers = await Voucher.find(query).sort({ createdAt: -1 });
 
-    // Lọc vouchers còn lượt sử dụng
     const availableVouchers = vouchers.filter(voucher => {
       if (voucher.usageLimit && voucher.usedCount >= voucher.usageLimit) {
         return false;
@@ -61,19 +55,18 @@ router.get('/', async (req, res) => {
 });
 
 /**
- * Lấy danh sách vouchers (không yêu cầu đăng nhập - chỉ vouchers public)
+ * Lấy danh sách vouchers public
  */
 router.get('/public', async (req, res) => {
   try {
     const now = new Date();
     const vouchers = await Voucher.find({
-      user: null, // Chỉ lấy vouchers public
+      user: null,
       isActive: true,
       startDate: { $lte: now },
       endDate: { $gte: now }
     }).sort({ createdAt: -1 });
 
-    // Lọc vouchers còn lượt sử dụng
     const availableVouchers = vouchers.filter(voucher => {
       if (voucher.usageLimit && voucher.usedCount >= voucher.usageLimit) {
         return false;
@@ -89,7 +82,6 @@ router.get('/public', async (req, res) => {
 
 /**
  * Admin tạo voucher mới
- * Body: { code, name, description, discountType, discountValue, minPurchaseAmount, maxDiscountAmount, startDate, endDate, usageLimit, user (optional) }
  */
 router.post('/', verifyToken, requireAdmin, async (req, res) => {
   try {
@@ -104,14 +96,13 @@ router.post('/', verifyToken, requireAdmin, async (req, res) => {
       startDate,
       endDate,
       usageLimit,
-      userId // Optional: nếu có thì tạo voucher cho user cụ thể, nếu null thì voucher public
+      userId
     } = req.body;
 
     if (!code || !name || !discountType || discountValue === undefined) {
       return res.status(400).json({ message: 'Thiếu thông tin bắt buộc' });
     }
 
-    // Kiểm tra code đã tồn tại chưa
     const existingVoucher = await Voucher.findOne({ code: code.toUpperCase() });
     if (existingVoucher) {
       return res.status(409).json({ message: 'Mã voucher đã tồn tại' });
@@ -130,7 +121,7 @@ router.post('/', verifyToken, requireAdmin, async (req, res) => {
       usageLimit: usageLimit ? Number(usageLimit) : null,
       usedCount: 0,
       isActive: true,
-      user: userId || null // null = public, có giá trị = voucher của user
+      user: userId || null
     });
 
     res.status(201).json(voucher);
@@ -140,8 +131,7 @@ router.post('/', verifyToken, requireAdmin, async (req, res) => {
 });
 
 /**
- * Admin lấy tất cả vouchers (bao gồm cả inactive)
- * Headers: Authorization: Bearer <token>
+ * Admin lấy tất cả vouchers
  */
 router.get('/admin/all', verifyToken, requireAdmin, async (req, res) => {
   try {
@@ -154,7 +144,6 @@ router.get('/admin/all', verifyToken, requireAdmin, async (req, res) => {
 
 /**
  * Admin cập nhật voucher
- * Headers: Authorization: Bearer <token>
  */
 router.put('/:id', verifyToken, requireAdmin, async (req, res) => {
   try {
@@ -178,7 +167,6 @@ router.put('/:id', verifyToken, requireAdmin, async (req, res) => {
       return res.status(404).json({ message: 'Không tìm thấy voucher' });
     }
 
-    // Kiểm tra code đã tồn tại chưa (nếu thay đổi code)
     if (code && code.toUpperCase() !== voucher.code) {
       const existingVoucher = await Voucher.findOne({ code: code.toUpperCase() });
       if (existingVoucher) {
@@ -208,7 +196,6 @@ router.put('/:id', verifyToken, requireAdmin, async (req, res) => {
 
 /**
  * Admin xóa voucher
- * Headers: Authorization: Bearer <token>
  */
 router.delete('/:id', verifyToken, requireAdmin, async (req, res) => {
   try {

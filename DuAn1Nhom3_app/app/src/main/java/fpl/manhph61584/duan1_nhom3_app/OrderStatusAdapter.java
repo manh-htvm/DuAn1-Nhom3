@@ -87,7 +87,7 @@ public class OrderStatusAdapter extends RecyclerView.Adapter<OrderStatusAdapter.
     @NonNull
     @Override
     public OrderStatusViewHolder onCreateViewHolder(@NonNull ViewGroup parent, int viewType) {
-        View view = LayoutInflater.from(context).inflate(R.layout.row_order_status, parent, false);
+        View view = LayoutInflater.from(context).inflate(R.layout.row_cart_item, parent, false);
         return new OrderStatusViewHolder(view);
     }
 

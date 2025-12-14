@@ -1,13 +1,13 @@
-// Login Page JavaScript
-
-// Get API base URL
 function getApiBaseUrl() {
-    // Nếu đang chạy trên localhost:3000 thì dùng relative path
     if (window.location.port === '3000' || window.location.hostname === 'localhost') {
         return '';
     }
-    // Nếu chạy qua Live Server hoặc port khác, dùng localhost:3000
     return 'http://localhost:3000';
+}
+
+function isValidEmail(email) {
+    const emailPattern = /^[A-Za-z0-9+_.-]+@[A-Za-z0-9.-]+\.[A-Za-z]{2,}$/;
+    return emailPattern.test(email);
 }
 
 document.addEventListener('DOMContentLoaded', () => {
@@ -19,7 +19,6 @@ document.addEventListener('DOMContentLoaded', () => {
     const errorMessage = document.getElementById('errorMessage');
     const btnLogin = document.getElementById('btnLogin');
 
-    // Toggle password visibility
     togglePassword.addEventListener('click', () => {
         const type = passwordInput.getAttribute('type') === 'password' ? 'text' : 'password';
         passwordInput.setAttribute('type', type);
@@ -29,14 +28,11 @@ document.addEventListener('DOMContentLoaded', () => {
         icon.classList.toggle('fa-eye-slash');
     });
 
-    // Check if already logged in
     const token = localStorage.getItem('adminToken');
     if (token) {
-        // Verify token by checking user info
         verifyTokenAndRedirect(token);
     }
 
-    // Handle form submission
     loginForm.addEventListener('submit', async (e) => {
         e.preventDefault();
         
@@ -48,22 +44,15 @@ document.addEventListener('DOMContentLoaded', () => {
             return;
         }
 
+        if (!isValidEmail(email)) {
+            showError('Email không đúng định dạng');
+            return;
+        }
+
         await login(email, password);
     });
 
-    // Get API base URL
-    function getApiBaseUrl() {
-        // Nếu đang chạy trên localhost:3000 thì dùng relative path
-        if (window.location.port === '3000' || window.location.hostname === 'localhost') {
-            return '';
-        }
-        // Nếu chạy qua Live Server hoặc port khác, dùng localhost:3000
-        return 'http://localhost:3000';
-    }
-
-    // Login function
     async function login(email, password) {
-        // Show loading state
         btnLogin.disabled = true;
         btnLogin.classList.add('loading');
         hideError();
@@ -78,7 +67,6 @@ document.addEventListener('DOMContentLoaded', () => {
                 body: JSON.stringify({ email, password })
             });
 
-            // Kiểm tra response có content không
             const contentType = response.headers.get('content-type');
             if (!contentType || !contentType.includes('application/json')) {
                 const text = await response.text();
@@ -86,7 +74,6 @@ document.addEventListener('DOMContentLoaded', () => {
                 throw new Error('Không thể kết nối đến server. Vui lòng đảm bảo server đang chạy trên port 3000.');
             }
 
-            // Kiểm tra response có body không
             if (!response.body) {
                 throw new Error('Server không phản hồi. Vui lòng kiểm tra server có đang chạy không.');
             }
@@ -94,15 +81,16 @@ document.addEventListener('DOMContentLoaded', () => {
             const data = await response.json();
 
             if (!response.ok) {
+                if (response.status === 403 && data.message && data.message.includes('khóa')) {
+                    throw new Error('Tài khoản của bạn đã bị khóa. Vui lòng liên hệ quản trị viên.');
+                }
                 throw new Error(data.message || 'Đăng nhập thất bại');
             }
 
-            // Check if user is admin
             if (data.user.role !== 'admin') {
                 throw new Error('Bạn không có quyền truy cập. Chỉ admin mới có thể đăng nhập.');
             }
 
-            // Save token and user info
             if (rememberMe.checked) {
                 localStorage.setItem('adminToken', data.token);
                 localStorage.setItem('adminUser', JSON.stringify(data.user));
@@ -111,7 +99,6 @@ document.addEventListener('DOMContentLoaded', () => {
                 sessionStorage.setItem('adminUser', JSON.stringify(data.user));
             }
 
-            // Redirect to admin panel
             window.location.href = `${apiBaseUrl}/admin.html`;
 
         } catch (error) {
@@ -127,7 +114,6 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     }
 
-    // Verify token and redirect
     async function verifyTokenAndRedirect(token) {
         try {
             const apiBaseUrl = getApiBaseUrl();
@@ -148,29 +134,23 @@ document.addEventListener('DOMContentLoaded', () => {
                 }
             }
         } catch (error) {
-            // Token invalid, stay on login page
             localStorage.removeItem('adminToken');
             sessionStorage.removeItem('adminToken');
         }
     }
 
-    // Show error message
     function showError(message) {
         errorMessage.textContent = message;
         errorMessage.classList.add('show');
-        
-        // Auto hide after 5 seconds
         setTimeout(() => {
             hideError();
         }, 5000);
     }
 
-    // Hide error message
     function hideError() {
         errorMessage.classList.remove('show');
     }
 
-    // Focus on email input
     emailInput.focus();
 });
 

@@ -300,7 +300,7 @@ async function loadProducts() {
         
         const tbody = document.getElementById('productsTableBody');
         if (products.length === 0) {
-            tbody.innerHTML = '<tr><td colspan="6" class="text-center">Không có sản phẩm nào</td></tr>';
+            tbody.innerHTML = '<tr><td colspan="7" class="text-center">Không có sản phẩm nào</td></tr>';
             return;
         }
         
@@ -308,6 +308,11 @@ async function loadProducts() {
             const imageUrl = product.image?.startsWith('/') 
                 ? `http://localhost:3000${product.image}` 
                 : product.image || '/placeholder.jpg';
+            const isActive = product.isActive !== false; // Mặc định true nếu không có field
+            const statusText = isActive ? 'Đang hiển thị' : 'Đã ẩn';
+            const statusClass = isActive ? 'badge-success' : 'badge-secondary';
+            const actionText = isActive ? 'Ẩn' : 'Hiện';
+            const actionIcon = isActive ? 'fa-eye-slash' : 'fa-eye';
             
             return `
                 <tr>
@@ -317,12 +322,15 @@ async function loadProducts() {
                     <td>${product.stock || 0}</td>
                     <td>${product.sold || 0}</td>
                     <td>
+                        <span class="badge ${statusClass}">${statusText}</span>
+                    </td>
+                    <td>
                         <div class="action-buttons">
                             <button class="action-btn action-btn-edit" onclick="editProduct('${product._id || product.id}')">
                                 <i class="fas fa-edit"></i> Sửa
                             </button>
-                            <button class="action-btn action-btn-delete" onclick="deleteProduct('${product._id || product.id}')">
-                                <i class="fas fa-trash"></i> Xóa
+                            <button class="action-btn action-btn-delete" onclick="toggleProductVisibility('${product._id || product.id}', ${isActive})">
+                                <i class="fas ${actionIcon}"></i> ${actionText}
                             </button>
                         </div>
                     </td>
@@ -332,7 +340,7 @@ async function loadProducts() {
     } catch (error) {
         showToast('Lỗi tải sản phẩm: ' + error.message, 'error');
         document.getElementById('productsTableBody').innerHTML = 
-            '<tr><td colspan="6" class="text-center">Lỗi tải dữ liệu</td></tr>';
+            '<tr><td colspan="7" class="text-center">Lỗi tải dữ liệu</td></tr>';
     } finally {
         hideLoading();
     }
@@ -640,14 +648,15 @@ async function saveProduct() {
     }
 }
 
-// Delete Product
-async function deleteProduct(productId) {
-    if (!confirm('Bạn có chắc muốn xóa sản phẩm này?')) return;
+// Ẩn/Hiện Product
+async function toggleProductVisibility(productId, isCurrentlyActive) {
+    const action = isCurrentlyActive ? 'ẩn' : 'hiển thị';
+    if (!confirm(`Bạn có chắc muốn ${action} sản phẩm này?`)) return;
     
     showLoading();
     try {
         await adminClient.deleteProduct(productId);
-        showToast('Xóa sản phẩm thành công!', 'success');
+        showToast(`${isCurrentlyActive ? 'Ẩn' : 'Hiển thị'} sản phẩm thành công!`, 'success');
         loadProducts();
     } catch (error) {
         showToast('Lỗi: ' + error.message, 'error');
@@ -671,21 +680,28 @@ async function loadUsers() {
         tbody.innerHTML = users.map(user => {
             const role = user.role === 'admin' ? 'Admin' : 'Người dùng';
             const roleClass = user.role === 'admin' ? 'badge-danger' : 'badge-info';
+            const isLocked = user.isLocked || false;
+            const lockStatus = isLocked ? 'Đã khóa' : 'Hoạt động';
+            const lockClass = isLocked ? 'badge-danger' : 'badge-success';
+            const lockButtonText = isLocked ? 'Mở khóa' : 'Khóa';
+            const lockButtonIcon = isLocked ? 'fa-unlock' : 'fa-lock';
             const createdAt = AdminClient.formatDate(user.createdAt || new Date());
+            const isAdmin = user.role === 'admin';
             
             return `
                 <tr>
                     <td>${user.name || 'N/A'}</td>
                     <td>${user.email || 'N/A'}</td>
                     <td><span class="badge ${roleClass}">${role}</span></td>
+                    <td><span class="badge ${lockClass}">${lockStatus}</span></td>
                     <td>${createdAt}</td>
                     <td>
                         <div class="action-buttons">
-                            <button class="action-btn action-btn-edit" onclick="changeUserRole('${user.id || user._id}', '${user.role}')">
+                            <button class="action-btn action-btn-edit" onclick="changeUserRole('${user.id || user._id}', '${user.role}')" ${isAdmin ? 'disabled style="opacity: 0.5; cursor: not-allowed;"' : ''}>
                                 <i class="fas fa-user-edit"></i> Đổi role
                             </button>
-                            <button class="action-btn action-btn-delete" onclick="deleteUser('${user.id || user._id}')">
-                                <i class="fas fa-trash"></i> Xóa
+                            <button class="action-btn action-btn-delete" onclick="lockUser('${user.id || user._id}', ${isLocked})" ${isAdmin ? 'disabled style="opacity: 0.5; cursor: not-allowed;"' : ''}>
+                                <i class="fas ${lockButtonIcon}"></i> ${lockButtonText}
                             </button>
                         </div>
                     </td>
@@ -703,6 +719,11 @@ async function loadUsers() {
 
 // Change User Role
 async function changeUserRole(userId, currentRole) {
+    if (currentRole === 'admin') {
+        showToast('Không thể đổi role của tài khoản admin', 'error');
+        return;
+    }
+    
     const newRole = currentRole === 'admin' ? 'user' : 'admin';
     if (!confirm(`Bạn có chắc muốn đổi role của người dùng này thành ${newRole === 'admin' ? 'Admin' : 'Người dùng'}?`)) return;
     
@@ -718,14 +739,31 @@ async function changeUserRole(userId, currentRole) {
     }
 }
 
-// Delete User
-async function deleteUser(userId) {
-    if (!confirm('Bạn có chắc muốn xóa người dùng này?')) return;
+// Lock/Unlock User
+async function lockUser(userId, isCurrentlyLocked) {
+    showLoading();
+    try {
+        const users = await adminClient.getAllUsers();
+        const user = users.find(u => (u.id || u._id) === userId);
+        
+        if (user && user.role === 'admin') {
+            showToast('Không thể khóa tài khoản admin', 'error');
+            return;
+        }
+    } catch (error) {
+        hideLoading();
+        showToast('Lỗi: ' + error.message, 'error');
+        return;
+    }
+    hideLoading();
+    
+    const action = isCurrentlyLocked ? 'mở khóa' : 'khóa';
+    if (!confirm(`Bạn có chắc muốn ${action} tài khoản này?`)) return;
     
     showLoading();
     try {
         await adminClient.deleteUser(userId);
-        showToast('Xóa người dùng thành công!', 'success');
+        showToast(`${isCurrentlyLocked ? 'Mở khóa' : 'Khóa'} tài khoản thành công!`, 'success');
         loadUsers();
     } catch (error) {
         showToast('Lỗi: ' + error.message, 'error');
@@ -791,8 +829,8 @@ async function loadOrders() {
     }
 }
 
-// Update Order Status
-function updateOrderStatus(orderId, currentStatus) {
+// Update Order Status - Hiển thị chi tiết đơn hàng
+async function updateOrderStatus(orderId, currentStatus) {
     // Không cho phép cập nhật nếu đã hoàn thành hoặc đã hủy
     if (currentStatus === 'delivered') {
         showToast('Đơn hàng đã hoàn thành, không thể chỉnh sửa', 'error');
@@ -803,9 +841,132 @@ function updateOrderStatus(orderId, currentStatus) {
         return;
     }
     
-    document.getElementById('orderStatusId').value = orderId;
-    document.getElementById('orderStatus').value = currentStatus;
-    document.getElementById('orderStatusModal').classList.add('show');
+    showLoading();
+    try {
+        // Lấy thông tin chi tiết đơn hàng
+        const orders = await adminClient.getAllOrders();
+        const order = orders.find(o => (o._id || o.id) === orderId);
+        
+        if (!order) {
+            showToast('Không tìm thấy đơn hàng', 'error');
+            return;
+        }
+        
+        // Điền thông tin đơn hàng
+        document.getElementById('orderDetailId').textContent = order._id || order.id || 'N/A';
+        document.getElementById('orderDetailDate').textContent = AdminClient.formatDate(order.createdAt || new Date());
+        document.getElementById('orderDetailCustomer').textContent = order.receiverName || order.user?.name || 'N/A';
+        document.getElementById('orderDetailPhone').textContent = order.phone || 'N/A';
+        document.getElementById('orderDetailAddress').textContent = order.shippingAddress || 'N/A';
+        document.getElementById('orderDetailNote').textContent = order.note || 'Không có';
+        
+        // Điền danh sách sản phẩm (sử dụng snapshot nếu có)
+        const itemsList = document.getElementById('orderItemsList');
+        if (order.items && order.items.length > 0) {
+            itemsList.innerHTML = order.items.map((item, index) => {
+                // Sử dụng snapshot nếu có, nếu không thì dùng thông tin từ product
+                const productName = item.productName || (item.product?.name || 'Sản phẩm đã bị xóa');
+                const productImage = item.productImage || (item.product?.image || '');
+                const productPrice = item.price || 0;
+                const quantity = item.quantity || 0;
+                const color = item.color || 'Mặc định';
+                const size = item.size || 'Free size';
+                
+                const imageUrl = productImage?.startsWith('/') 
+                    ? `http://localhost:3000${productImage}` 
+                    : (productImage || '/placeholder.jpg');
+                
+                return `
+                    <div style="display: flex; gap: 15px; padding: 15px; border-bottom: 1px solid #eee; align-items: center;">
+                        <img src="${imageUrl}" alt="${productName}" style="width: 60px; height: 60px; object-fit: cover; border-radius: 5px;">
+                        <div style="flex: 1;">
+                            <div style="font-weight: bold; margin-bottom: 5px;">${productName}</div>
+                            <div style="color: #666; font-size: 0.9em;">
+                                Màu: ${color} | Size: ${size}
+                            </div>
+                            <div style="color: #666; font-size: 0.9em;">
+                                Số lượng: ${quantity} x ${AdminClient.formatMoney(productPrice)}₫
+                            </div>
+                        </div>
+                        <div style="font-weight: bold; color: #e74c3c;">
+                            ${AdminClient.formatMoney(productPrice * quantity)}₫
+                        </div>
+                    </div>
+                `;
+            }).join('');
+        } else {
+            itemsList.innerHTML = '<div style="text-align: center; padding: 20px; color: #999;">Không có sản phẩm</div>';
+        }
+        
+        // Điền tổng tiền
+        document.getElementById('orderDetailTotalAmount').textContent = 
+            AdminClient.formatMoney(order.totalAmount || 0) + '₫';
+        document.getElementById('orderDetailDiscount').textContent = 
+            '-' + AdminClient.formatMoney(order.discountAmount || 0) + '₫';
+        document.getElementById('orderDetailFinalAmount').textContent = 
+            AdminClient.formatMoney(order.finalAmount || order.totalAmount || 0) + '₫';
+        
+        // Điền form cập nhật trạng thái với logic mới
+        document.getElementById('orderStatusId').value = orderId;
+        const statusSelect = document.getElementById('orderStatus');
+        
+        // Xóa tất cả options cũ
+        statusSelect.innerHTML = '';
+        
+        // Logic: pending -> chỉ có shipped, shipped -> chỉ có delivered
+        // Bỏ processing và cancelled (cancelled do người dùng tự hủy)
+        if (currentStatus === 'pending') {
+            // Từ "Chờ xác nhận" chỉ có thể chuyển đến "Đang giao"
+            statusSelect.innerHTML = `
+                <option value="pending" selected>Chờ xác nhận</option>
+                <option value="shipped">Đang giao</option>
+            `;
+        } else if (currentStatus === 'shipped') {
+            // Từ "Đang giao" chỉ có thể chuyển đến "Hoàn thành"
+            statusSelect.innerHTML = `
+                <option value="shipped" selected>Đang giao</option>
+                <option value="delivered">Hoàn thành</option>
+            `;
+        } else if (currentStatus === 'delivered') {
+            // Đã hoàn thành thì không thể thay đổi
+            statusSelect.innerHTML = `
+                <option value="delivered" selected>Hoàn thành</option>
+            `;
+            statusSelect.disabled = true;
+        } else if (currentStatus === 'cancelled') {
+            // Đã hủy thì không thể thay đổi
+            statusSelect.innerHTML = `
+                <option value="cancelled" selected>Đã hủy</option>
+            `;
+            statusSelect.disabled = true;
+        } else {
+            // Trường hợp khác (nếu có processing cũ) - có thể chuyển sang shipped
+            if (currentStatus === 'processing') {
+                statusSelect.innerHTML = `
+                    <option value="processing" selected>Đang xử lý</option>
+                    <option value="shipped">Đang giao</option>
+                `;
+            } else {
+                // Trạng thái khác không xác định
+                statusSelect.innerHTML = `
+                    <option value="${currentStatus}" selected>${getStatusText(currentStatus)}</option>
+                `;
+                statusSelect.disabled = true;
+            }
+        }
+        
+        // Đảm bảo select không bị disabled nếu chưa hoàn thành hoặc hủy
+        if (currentStatus !== 'delivered' && currentStatus !== 'cancelled') {
+            statusSelect.disabled = false;
+        }
+        
+        // Hiển thị modal
+        document.getElementById('orderStatusModal').classList.add('show');
+    } catch (error) {
+        showToast('Lỗi tải thông tin đơn hàng: ' + error.message, 'error');
+    } finally {
+        hideLoading();
+    }
 }
 
 // Save Order Status
@@ -813,33 +974,83 @@ async function saveOrderStatus() {
     const orderId = document.getElementById('orderStatusId').value;
     const status = document.getElementById('orderStatus').value;
     
-    // Không cho phép cập nhật thành delivered nếu đã là delivered (bảo vệ thêm)
-    if (status === 'delivered') {
-        // Kiểm tra order hiện tại
-        try {
-            const orders = await adminClient.getAllOrders();
-            const currentOrder = orders.find(o => (o._id || o.id) === orderId);
-            if (currentOrder && currentOrder.status === 'delivered') {
-                showToast('Đơn hàng đã hoàn thành, không thể chỉnh sửa', 'error');
-                closeModal('orderStatusModal');
-                return;
-            }
-        } catch (error) {
-            // Continue if check fails
+    // Validate chuyển trạng thái
+    try {
+        const orders = await adminClient.getAllOrders();
+        const currentOrder = orders.find(o => (o._id || o.id) === orderId);
+        
+        if (!currentOrder) {
+            showToast('Không tìm thấy đơn hàng', 'error');
+            return;
         }
+        
+        const currentStatus = currentOrder.status;
+        
+        // Không cho phép cập nhật nếu đã hoàn thành hoặc đã hủy
+        if (currentStatus === 'delivered' || currentStatus === 'cancelled') {
+            showToast('Đơn hàng đã hoàn thành hoặc đã hủy, không thể chỉnh sửa', 'error');
+            closeModal('orderStatusModal');
+            return;
+        }
+        
+        // Validate chuyển trạng thái hợp lệ
+        if (currentStatus === 'pending' && status !== 'shipped') {
+            showToast('Từ "Chờ xác nhận" chỉ có thể chuyển đến "Đang giao"', 'error');
+            return;
+        }
+        
+        if (currentStatus === 'shipped' && status !== 'delivered') {
+            showToast('Từ "Đang giao" chỉ có thể chuyển đến "Hoàn thành"', 'error');
+            return;
+        }
+        
+        // Không cho phép chọn cancelled (người dùng tự hủy)
+        if (status === 'cancelled') {
+            showToast('Không thể hủy đơn hàng từ đây. Người dùng sẽ tự hủy.', 'error');
+            return;
+        }
+        
+        // Không cho phép chọn processing (đã bỏ)
+        if (status === 'processing') {
+            showToast('Trạng thái "Đang xử lý" đã bị bỏ', 'error');
+            return;
+        }
+        
+    } catch (error) {
+        showToast('Lỗi kiểm tra đơn hàng: ' + error.message, 'error');
+        return;
+    }
+    
+    if (!orderId || !status) {
+        showToast('Thiếu thông tin đơn hàng hoặc trạng thái', 'error');
+        return;
     }
     
     showLoading();
     try {
-        await adminClient.updateOrderStatus(orderId, status);
+        const result = await adminClient.updateOrderStatus(orderId, status);
         showToast('Cập nhật trạng thái đơn hàng thành công!', 'success');
         closeModal('orderStatusModal');
-        loadOrders();
+        // Reload orders để cập nhật danh sách
+        await loadOrders();
     } catch (error) {
+        console.error('Error updating order status:', error);
         showToast('Lỗi: ' + error.message, 'error');
     } finally {
         hideLoading();
     }
+}
+
+// Helper function để lấy text của trạng thái
+function getStatusText(status) {
+    const statusMap = {
+        'pending': 'Chờ xác nhận',
+        'processing': 'Đang xử lý',
+        'shipped': 'Đang giao',
+        'delivered': 'Hoàn thành',
+        'cancelled': 'Đã hủy'
+    };
+    return statusMap[status] || status;
 }
 
 // Load Vouchers
@@ -1018,7 +1229,7 @@ async function loadReviews() {
         const tbody = document.getElementById('reviewsTableBody');
         
         if (reviews.length === 0) {
-            tbody.innerHTML = '<tr><td colspan="6" class="text-center">Không có đánh giá nào</td></tr>';
+            tbody.innerHTML = '<tr><td colspan="7" class="text-center">Không có đánh giá nào</td></tr>';
             return;
         }
         
@@ -1027,6 +1238,12 @@ async function loadReviews() {
             const productName = review.product?.name || 'N/A';
             const rating = '⭐'.repeat(review.rating || 0);
             const hasReply = review.adminReply ? 'Có' : 'Chưa có';
+            const isHidden = review.isHidden || false;
+            const statusText = isHidden ? 'Đã ẩn' : 'Đang hiển thị';
+            const statusClass = isHidden ? 'badge-secondary' : 'badge-success';
+            const hideShowText = isHidden ? 'Hiện' : 'Ẩn';
+            const hideShowIcon = isHidden ? 'fa-eye' : 'fa-eye-slash';
+            const hideShowClass = isHidden ? 'action-btn-edit' : 'action-btn-delete';
             
             return `
                 <tr>
@@ -1036,12 +1253,15 @@ async function loadReviews() {
                     <td>${review.comment || 'N/A'}</td>
                     <td>${hasReply}</td>
                     <td>
+                        <span class="badge ${statusClass}">${statusText}</span>
+                    </td>
+                    <td>
                         <div class="action-buttons">
                             <button class="action-btn action-btn-reply" onclick="replyReview('${review._id || review.id}', '${(review.adminReply || '').replace(/'/g, "\\'")}')">
                                 <i class="fas fa-reply"></i> Phản hồi
                             </button>
-                            <button class="action-btn action-btn-delete" onclick="deleteReview('${review._id || review.id}')">
-                                <i class="fas fa-trash"></i> Xóa
+                            <button class="action-btn ${hideShowClass}" onclick="toggleReviewVisibility('${review._id || review.id}', ${isHidden})">
+                                <i class="fas ${hideShowIcon}"></i> ${hideShowText}
                             </button>
                         </div>
                     </td>
@@ -1051,7 +1271,7 @@ async function loadReviews() {
     } catch (error) {
         showToast('Lỗi tải đánh giá: ' + error.message, 'error');
         document.getElementById('reviewsTableBody').innerHTML = 
-            '<tr><td colspan="6" class="text-center">Lỗi tải dữ liệu</td></tr>';
+            '<tr><td colspan="7" class="text-center">Lỗi tải dữ liệu</td></tr>';
     } finally {
         hideLoading();
     }
@@ -1079,6 +1299,20 @@ async function saveReviewReply() {
         await adminClient.replyReview(reviewId, reply);
         showToast('Phản hồi đánh giá thành công!', 'success');
         closeModal('reviewReplyModal');
+        loadReviews();
+    } catch (error) {
+        showToast('Lỗi: ' + error.message, 'error');
+    } finally {
+        hideLoading();
+    }
+}
+
+// Toggle Review Visibility
+async function toggleReviewVisibility(reviewId, isCurrentlyHidden) {
+    showLoading();
+    try {
+        await adminClient.toggleReviewVisibility(reviewId);
+        showToast(isCurrentlyHidden ? 'Hiển thị đánh giá thành công!' : 'Ẩn đánh giá thành công!', 'success');
         loadReviews();
     } catch (error) {
         showToast('Lỗi: ' + error.message, 'error');
@@ -1131,6 +1365,22 @@ async function loadRevenue() {
             `).join('');
         } else {
             tbody.innerHTML = '<tr><td colspan="2" class="text-center">Không có dữ liệu</td></tr>';
+        }
+        
+        // Hiển thị top sản phẩm bán chạy
+        const topProductsBody = document.getElementById('topProductsBody');
+        console.log('Top Products from API:', revenue.topProducts);
+        if (revenue.topProducts && Array.isArray(revenue.topProducts) && revenue.topProducts.length > 0) {
+            topProductsBody.innerHTML = revenue.topProducts.map((product, index) => `
+                <tr>
+                    <td>${index + 1}</td>
+                    <td><strong>${product.productName || 'Sản phẩm không xác định'}</strong></td>
+                    <td>${product.quantity || 0}</td>
+                    <td><strong>${AdminClient.formatMoney(product.revenue || 0)}₫</strong></td>
+                </tr>
+            `).join('');
+        } else {
+            topProductsBody.innerHTML = '<tr><td colspan="4" class="text-center">Không có dữ liệu</td></tr>';
         }
         
         document.getElementById('revenueStats').style.display = 'block';

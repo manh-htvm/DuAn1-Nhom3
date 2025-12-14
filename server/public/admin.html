@@ -125,12 +125,13 @@
                             <th>Giá</th>
                             <th>Tồn kho</th>
                             <th>Đã bán</th>
+                            <th>Trạng thái</th>
                             <th>Thao tác</th>
                         </tr>
                     </thead>
                     <tbody id="productsTableBody">
                         <tr>
-                            <td colspan="6" class="text-center">Đang tải...</td>
+                            <td colspan="7" class="text-center">Đang tải...</td>
                         </tr>
                     </tbody>
                 </table>
@@ -176,13 +177,14 @@
                             <th>Tên</th>
                             <th>Email</th>
                             <th>Vai trò</th>
+                            <th>Trạng thái</th>
                             <th>Ngày tạo</th>
                             <th>Thao tác</th>
                         </tr>
                     </thead>
                     <tbody id="usersTableBody">
                         <tr>
-                            <td colspan="5" class="text-center">Đang tải...</td>
+                            <td colspan="6" class="text-center">Đang tải...</td>
                         </tr>
                     </tbody>
                 </table>
@@ -269,6 +271,7 @@
                             <th>Đánh giá</th>
                             <th>Bình luận</th>
                             <th>Phản hồi</th>
+                            <th>Trạng thái</th>
                             <th>Thao tác</th>
                         </tr>
                     </thead>
@@ -321,6 +324,23 @@
                                 </tr>
                             </thead>
                             <tbody id="categoryRevenueBody">
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+                <div class="top-products" style="margin-top: 30px;">
+                    <h3>Top sản phẩm bán chạy</h3>
+                    <div class="table-container">
+                        <table class="data-table">
+                            <thead>
+                                <tr>
+                                    <th>STT</th>
+                                    <th>Tên sản phẩm</th>
+                                    <th>Số lượng đã bán</th>
+                                    <th>Doanh thu</th>
+                                </tr>
+                            </thead>
+                            <tbody id="topProductsBody">
                             </tbody>
                         </table>
                     </div>
@@ -503,13 +523,69 @@
     </div>
 
     <!-- Order Status Modal -->
-    <div class="modal" id="orderStatusModal">
+    <div class="modal" id="orderStatusModal" style="max-width: 800px;">
         <div class="modal-content">
             <div class="modal-header">
-                <h3>Cập nhật trạng thái đơn hàng</h3>
+                <h3>Chi tiết đơn hàng</h3>
                 <button class="modal-close" onclick="closeModal('orderStatusModal')">&times;</button>
             </div>
             <div class="modal-body">
+                <!-- Thông tin đơn hàng -->
+                <div id="orderDetailsInfo" style="margin-bottom: 20px;">
+                    <h4 style="margin-bottom: 15px; color: #333;">Thông tin đơn hàng</h4>
+                    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 15px; margin-bottom: 15px;">
+                        <div>
+                            <strong>Mã đơn hàng:</strong>
+                            <div id="orderDetailId" style="color: #666;"></div>
+                        </div>
+                        <div>
+                            <strong>Ngày đặt:</strong>
+                            <div id="orderDetailDate" style="color: #666;"></div>
+                        </div>
+                        <div>
+                            <strong>Khách hàng:</strong>
+                            <div id="orderDetailCustomer" style="color: #666;"></div>
+                        </div>
+                        <div>
+                            <strong>Số điện thoại:</strong>
+                            <div id="orderDetailPhone" style="color: #666;"></div>
+                        </div>
+                    </div>
+                    <div style="margin-bottom: 15px;">
+                        <strong>Địa chỉ giao hàng:</strong>
+                        <div id="orderDetailAddress" style="color: #666;"></div>
+                    </div>
+                    <div style="margin-bottom: 15px;">
+                        <strong>Ghi chú:</strong>
+                        <div id="orderDetailNote" style="color: #666; font-style: italic;">Không có</div>
+                    </div>
+                </div>
+
+                <!-- Danh sách sản phẩm -->
+                <div id="orderDetailsItems" style="margin-bottom: 20px;">
+                    <h4 style="margin-bottom: 15px; color: #333;">Sản phẩm trong đơn hàng</h4>
+                    <div id="orderItemsList" style="max-height: 300px; overflow-y: auto;">
+                        <!-- Sẽ được điền bằng JavaScript -->
+                    </div>
+                </div>
+
+                <!-- Tổng tiền -->
+                <div id="orderDetailsTotal" style="margin-bottom: 20px; padding: 15px; background: #f5f5f5; border-radius: 5px;">
+                    <div style="display: flex; justify-content: space-between; margin-bottom: 5px;">
+                        <span>Tổng tiền:</span>
+                        <span id="orderDetailTotalAmount" style="font-weight: bold;"></span>
+                    </div>
+                    <div style="display: flex; justify-content: space-between; margin-bottom: 5px;">
+                        <span>Giảm giá:</span>
+                        <span id="orderDetailDiscount" style="color: #e74c3c;"></span>
+                    </div>
+                    <div style="display: flex; justify-content: space-between; margin-top: 10px; padding-top: 10px; border-top: 2px solid #ddd;">
+                        <span style="font-weight: bold; font-size: 1.1em;">Thành tiền:</span>
+                        <span id="orderDetailFinalAmount" style="font-weight: bold; font-size: 1.2em; color: #e74c3c;"></span>
+                    </div>
+                </div>
+
+                <!-- Form cập nhật trạng thái -->
                 <form id="orderStatusForm">
                     <input type="hidden" id="orderStatusId">
                     <div class="form-group">
@@ -525,8 +601,8 @@
                 </form>
             </div>
             <div class="modal-footer">
-                <button class="btn btn-secondary" onclick="closeModal('orderStatusModal')">Hủy</button>
-                <button class="btn btn-primary" id="btnSaveOrderStatus">Lưu</button>
+                <button class="btn btn-secondary" onclick="closeModal('orderStatusModal')">Đóng</button>
+                <button class="btn btn-primary" id="btnSaveOrderStatus">Cập nhật trạng thái</button>
             </div>
         </div>
     </div>

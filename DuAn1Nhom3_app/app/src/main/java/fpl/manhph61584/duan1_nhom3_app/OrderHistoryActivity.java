@@ -19,6 +19,8 @@ import fpl.manhph61584.duan1_nhom3_app.UserManager;
 import retrofit2.Call;
 import retrofit2.Callback;
 import retrofit2.Response;
+import com.google.gson.JsonObject;
+import com.google.gson.Gson;
 
 public class OrderHistoryActivity extends AppCompatActivity {
 
@@ -139,11 +141,9 @@ public class OrderHistoryActivity extends AppCompatActivity {
     }
 
     private void filterOrders() {
-        // Nếu là tab "Hoàn thành" (shipped), hiển thị items thay vì orders
         if (currentFilter.equals("shipped")) {
             List<fpl.manhph61584.duan1_nhom3_app.network.dto.OrderItemDto> allItems = new ArrayList<>();
             
-            // Lấy tất cả items từ các đơn hàng đã giao
             for (OrderDto order : allOrders) {
                 if ("delivered".equals(order.getStatus()) && order.getItems() != null) {
                     allItems.addAll(order.getItems());
@@ -161,7 +161,6 @@ public class OrderHistoryActivity extends AppCompatActivity {
                 recyclerViewOrders.setVisibility(View.VISIBLE);
             }
         } else {
-            // Các tab khác hiển thị orders như bình thường
             List<OrderDto> filteredOrders = new ArrayList<>();
             
             for (OrderDto order : allOrders) {
@@ -169,7 +168,7 @@ public class OrderHistoryActivity extends AppCompatActivity {
                     filteredOrders.add(order);
                 } else if (currentFilter.equals("pending") && "pending".equals(order.getStatus())) {
                     filteredOrders.add(order);
-                } else if (currentFilter.equals("processing") && "processing".equals(order.getStatus())) {
+                } else if (currentFilter.equals("processing") && "shipped".equals(order.getStatus())) {
                     filteredOrders.add(order);
                 } else if (currentFilter.equals("cancelled") && "cancelled".equals(order.getStatus())) {
                     filteredOrders.add(order);
@@ -191,6 +190,106 @@ public class OrderHistoryActivity extends AppCompatActivity {
 
     public void reloadOrders() {
         loadOrders();
+    }
+
+    public void showReviewDialog(String productId) {
+        android.app.AlertDialog.Builder builder = new android.app.AlertDialog.Builder(this);
+        android.view.View dialogView = android.view.LayoutInflater.from(this).inflate(R.layout.dialog_review, null);
+        builder.setView(dialogView);
+
+        android.widget.ImageView star1 = dialogView.findViewById(R.id.star1);
+        android.widget.ImageView star2 = dialogView.findViewById(R.id.star2);
+        android.widget.ImageView star3 = dialogView.findViewById(R.id.star3);
+        android.widget.ImageView star4 = dialogView.findViewById(R.id.star4);
+        android.widget.ImageView star5 = dialogView.findViewById(R.id.star5);
+        android.widget.TextView txtRatingValue = dialogView.findViewById(R.id.txtRatingValue);
+        android.widget.EditText edtComment = dialogView.findViewById(R.id.edtReviewComment);
+        android.widget.Button btnCancel = dialogView.findViewById(R.id.btnCancelReview);
+        android.widget.Button btnSubmit = dialogView.findViewById(R.id.btnSubmitReview);
+
+        final int[] selectedRating = {0};
+        android.widget.ImageView[] stars = {star1, star2, star3, star4, star5};
+
+        android.view.View.OnClickListener starClickListener = v -> {
+            int rating = 0;
+            for (int i = 0; i < stars.length; i++) {
+                if (v == stars[i]) {
+                    rating = i + 1;
+                    break;
+                }
+            }
+            selectedRating[0] = rating;
+            updateStars(stars, rating);
+            txtRatingValue.setText(rating + " sao");
+        };
+
+        for (android.widget.ImageView star : stars) {
+            star.setOnClickListener(starClickListener);
+        }
+
+        android.app.AlertDialog dialog = builder.create();
+
+        btnCancel.setOnClickListener(v -> dialog.dismiss());
+
+        btnSubmit.setOnClickListener(v -> {
+            if (selectedRating[0] == 0) {
+                android.widget.Toast.makeText(this, "Vui lòng chọn số sao", android.widget.Toast.LENGTH_SHORT).show();
+                return;
+            }
+
+            String token = UserManager.getAuthToken();
+            if (token == null) {
+                android.widget.Toast.makeText(this, "Vui lòng đăng nhập", android.widget.Toast.LENGTH_SHORT).show();
+                return;
+            }
+
+            String comment = edtComment.getText().toString().trim();
+            fpl.manhph61584.duan1_nhom3_app.network.dto.ReviewRequest request = 
+                new fpl.manhph61584.duan1_nhom3_app.network.dto.ReviewRequest(productId, selectedRating[0], comment);
+
+            String authHeader = "Bearer " + token;
+            ApiClient.getApiService().createReview(authHeader, request).enqueue(new Callback<fpl.manhph61584.duan1_nhom3_app.network.dto.ReviewResponse>() {
+                @Override
+                public void onResponse(Call<fpl.manhph61584.duan1_nhom3_app.network.dto.ReviewResponse> call, 
+                                     Response<fpl.manhph61584.duan1_nhom3_app.network.dto.ReviewResponse> response) {
+                    if (response.isSuccessful() && response.body() != null) {
+                        android.widget.Toast.makeText(OrderHistoryActivity.this, "Đánh giá thành công!", android.widget.Toast.LENGTH_SHORT).show();
+                        dialog.dismiss();
+                    } else {
+                        String errorMsg = "Lỗi đánh giá";
+                        if (response.errorBody() != null) {
+                            try {
+                                String errorStr = response.errorBody().string();
+                                com.google.gson.JsonObject jsonObject = new com.google.gson.Gson().fromJson(errorStr, com.google.gson.JsonObject.class);
+                                if (jsonObject.has("message")) {
+                                    errorMsg = jsonObject.get("message").getAsString();
+                                }
+                            } catch (Exception e) {
+                                errorMsg += ": " + response.message();
+                            }
+                        }
+                        android.widget.Toast.makeText(OrderHistoryActivity.this, errorMsg, android.widget.Toast.LENGTH_LONG).show();
+                    }
+                }
+
+                @Override
+                public void onFailure(Call<fpl.manhph61584.duan1_nhom3_app.network.dto.ReviewResponse> call, Throwable t) {
+                    android.widget.Toast.makeText(OrderHistoryActivity.this, "Lỗi kết nối: " + t.getMessage(), android.widget.Toast.LENGTH_SHORT).show();
+                }
+            });
+        });
+
+        dialog.show();
+    }
+
+    private void updateStars(android.widget.ImageView[] stars, int rating) {
+        for (int i = 0; i < stars.length; i++) {
+            if (i < rating) {
+                stars[i].setImageResource(R.drawable.ic_star);
+            } else {
+                stars[i].setImageResource(R.drawable.ic_star_empty);
+            }
+        }
     }
 
     @Override
