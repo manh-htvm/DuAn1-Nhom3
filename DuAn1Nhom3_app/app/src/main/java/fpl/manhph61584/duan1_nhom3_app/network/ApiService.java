@@ -13,9 +13,9 @@ import fpl.manhph61584.duan1_nhom3_app.network.dto.RegisterRequest;
 import fpl.manhph61584.duan1_nhom3_app.network.dto.RegisterResponse;
 import fpl.manhph61584.duan1_nhom3_app.network.dto.AddToCartRequest;
 import fpl.manhph61584.duan1_nhom3_app.network.dto.CartResponse;
+import fpl.manhph61584.duan1_nhom3_app.network.dto.RevenueResponse;
 import fpl.manhph61584.duan1_nhom3_app.network.dto.ReviewRequest;
 import fpl.manhph61584.duan1_nhom3_app.network.dto.ReviewResponse;
-import fpl.manhph61584.duan1_nhom3_app.network.dto.ReplyRequest;
 import fpl.manhph61584.duan1_nhom3_app.network.dto.UpdateProfileRequest;
 import fpl.manhph61584.duan1_nhom3_app.network.dto.UpdateProfileResponse;
 import fpl.manhph61584.duan1_nhom3_app.network.dto.UploadResponse;
@@ -85,11 +85,7 @@ public interface ApiService {
     @POST("reviews")
     Call<ReviewResponse> createReview(@Header("Authorization") String token, @Body ReviewRequest request);
 
-    @POST("reviews/{reviewId}/reply")
-    Call<Review> replyReview(@Header("Authorization") String token, @Path("reviewId") String reviewId, @Body ReplyRequest request);
-
-    @DELETE("reviews/{reviewId}")
-    Call<ReviewResponse> deleteReview(@Header("Authorization") String token, @Path("reviewId") String reviewId);
+    // Admin review management removed - chỉ dành cho khách hàng
 
     // Cart endpoints
     @GET("cart")
@@ -130,25 +126,19 @@ public interface ApiService {
         @Query("status") String status
     );
 
-    // Admin endpoints
-    @GET("reviews/admin/manage")
-    Call<List<Review>> getAdminReviews(
+    @GET("orders/{id}")
+    Call<fpl.manhph61584.duan1_nhom3_app.network.dto.OrderDto> getOrderDetail(
         @Header("Authorization") String token,
-        @Query("product") String productId,
-        @Query("user") String userId,
-        @Query("rating") Integer rating
+        @Path("id") String orderId
     );
 
-    @POST("vouchers")
-    Call<Voucher> createVoucher(
+    @PUT("orders/{id}/cancel")
+    Call<fpl.manhph61584.duan1_nhom3_app.network.dto.OrderDto> cancelOrder(
         @Header("Authorization") String token,
-        @Body Voucher voucher
+        @Path("id") String orderId,
+        @Body fpl.manhph61584.duan1_nhom3_app.network.dto.CancelOrderRequest request
     );
+
+    // Admin endpoints removed - chỉ dành cho khách hàng
+    // Tất cả các API admin đã được chuyển sang web admin panel
 }
-
-
-
-
-
-
-

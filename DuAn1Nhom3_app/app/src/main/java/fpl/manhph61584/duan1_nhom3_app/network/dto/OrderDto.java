@@ -1,18 +1,24 @@
 package fpl.manhph61584.duan1_nhom3_app.network.dto;
 
+import com.google.gson.annotations.SerializedName;
 import java.util.List;
 
 import fpl.manhph61584.duan1_nhom3_app.Voucher;
 
 public class OrderDto {
+    @SerializedName("_id")
     private String _id;
-    private String user;
+    
+    @SerializedName("user")
+    private UserInfo user;
+    
     private List<OrderItemDto> items;
     private double totalAmount;
     private double discountAmount;
     private double finalAmount;
     private String status;
     private String paymentStatus;
+    private String receiverName;
     private String phone;
     private String shippingAddress;
     private String note;
@@ -28,12 +34,49 @@ public class OrderDto {
         this._id = _id;
     }
 
-    public String getUser() {
+    public String getUserId() {
+        if (user != null && user.getId() != null) {
+            return user.getId();
+        }
+        return null;
+    }
+
+    public UserInfo getUser() {
         return user;
     }
 
-    public void setUser(String user) {
+    public void setUser(UserInfo user) {
         this.user = user;
+    }
+
+    public static class UserInfo {
+        @SerializedName("_id")
+        private String _id;
+        
+        private String name;
+        private String email;
+
+        public String getId() { 
+            return _id;
+        }
+        
+        public void setId(String _id) { 
+            this._id = _id;
+        }
+
+        public String getName() { return name; }
+        public void setName(String name) { this.name = name; }
+
+        public String getEmail() { return email; }
+        public void setEmail(String email) { this.email = email; }
+    }
+    
+    public String getReceiverName() {
+        return receiverName;
+    }
+    
+    public void setReceiverName(String receiverName) {
+        this.receiverName = receiverName;
     }
 
     public List<OrderItemDto> getItems() {
@@ -132,13 +175,3 @@ public class OrderDto {
         this.updatedAt = updatedAt;
     }
 }
-
-
-
-
-
-
-
-
-
-

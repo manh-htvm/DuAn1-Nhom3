@@ -4,7 +4,6 @@ const { verifyToken, requireAdmin } = require('../middleware/auth');
 
 const router = express.Router();
 
-// Tạo category mới (Admin only)
 router.post('/', verifyToken, requireAdmin, async (req, res) => {
   try {
     const category = await Category.create({
@@ -20,7 +19,6 @@ router.post('/', verifyToken, requireAdmin, async (req, res) => {
   }
 });
 
-// Lấy danh sách category
 router.get('/', async (_req, res) => {
   try {
     const categories = await Category.find().sort({ createdAt: -1 });
@@ -30,7 +28,6 @@ router.get('/', async (_req, res) => {
   }
 });
 
-// Cập nhật category (Admin only)
 router.put('/:id', verifyToken, requireAdmin, async (req, res) => {
   try {
     const { name, description } = req.body;
@@ -59,7 +56,6 @@ router.put('/:id', verifyToken, requireAdmin, async (req, res) => {
   }
 });
 
-// Xóa category (Admin only)
 router.delete('/:id', verifyToken, requireAdmin, async (req, res) => {
   try {
     const category = await Category.findByIdAndDelete(req.params.id);

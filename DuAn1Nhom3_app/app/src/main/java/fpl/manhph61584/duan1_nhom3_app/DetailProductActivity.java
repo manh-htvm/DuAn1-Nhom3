@@ -26,11 +26,11 @@ import java.util.Locale;
 import fpl.manhph61584.duan1_nhom3_app.network.ApiClient;
 import fpl.manhph61584.duan1_nhom3_app.network.ApiService;
 import fpl.manhph61584.duan1_nhom3_app.network.dto.AddToCartRequest;
+import fpl.manhph61584.duan1_nhom3_app.network.dto.CartItemDto;
 import fpl.manhph61584.duan1_nhom3_app.network.dto.CartResponse;
 import fpl.manhph61584.duan1_nhom3_app.network.dto.ProductRatingResponse;
 import fpl.manhph61584.duan1_nhom3_app.network.dto.ReviewRequest;
 import fpl.manhph61584.duan1_nhom3_app.network.dto.ReviewResponse;
-import fpl.manhph61584.duan1_nhom3_app.network.dto.ReplyRequest;
 import fpl.manhph61584.duan1_nhom3_app.network.dto.UserDto;
 import fpl.manhph61584.duan1_nhom3_app.Product;
 import fpl.manhph61584.duan1_nhom3_app.Review;
@@ -410,22 +410,73 @@ public class DetailProductActivity extends AppCompatActivity {
             ApiClient.getApiService().addToCart(authHeader, request).enqueue(new Callback<CartResponse>() {
                 @Override
                 public void onResponse(Call<CartResponse> call, Response<CartResponse> response) {
+                    android.util.Log.d("AddToCart", "Response code: " + response.code());
+                    android.util.Log.d("AddToCart", "Response isSuccessful: " + response.isSuccessful());
+                    android.util.Log.d("AddToCart", "Response body is null: " + (response.body() == null));
+                    
                     if (response.isSuccessful() && response.body() != null) {
-                        // Thêm vào local cart sau khi server thành công
-                        CartManager.addToCart(currentProduct, quantity, safeColor, safeSize);
+                        // Đã lưu vào MongoDB thành công, sync local cart với server
+                        CartResponse cartResponse = response.body();
+                        List<CartItemDto> items = cartResponse.getItems();
+                        
+                        android.util.Log.d("AddToCart", "Cart response items count: " + (items != null ? items.size() : 0));
+                        
+                        // Clear local và sync với server
+                        CartManager.clear();
+                        if (items != null && !items.isEmpty()) {
+                            int addedCount = 0;
+                            for (CartItemDto dto : items) {
+                                if (dto != null && dto.getProduct() != null) {
+                                    CartManager.addToCart(
+                                        dto.getProduct(),
+                                        dto.getQuantity(),
+                                        dto.getColor() != null ? dto.getColor() : "Mặc định",
+                                        dto.getSize() != null ? dto.getSize() : "Free size"
+                                    );
+                                    addedCount++;
+                                    android.util.Log.d("AddToCart", "Added item: " + dto.getProduct().getName() + " x" + dto.getQuantity());
+                                } else {
+                                    android.util.Log.w("AddToCart", "Skipped null item or product");
+                                }
+                            }
+                            android.util.Log.d("AddToCart", "Total items added to local cart: " + addedCount);
+                        } else {
+                            android.util.Log.w("AddToCart", "Items list is null or empty");
+                        }
+                        android.util.Log.d("AddToCart", "Local cart items count: " + CartManager.getCartItems().size());
                         Toast.makeText(DetailProductActivity.this, "Đã thêm vào giỏ hàng", Toast.LENGTH_SHORT).show();
                     } else {
-                        // Vẫn thêm vào local cart nếu server lỗi
-                        CartManager.addToCart(currentProduct, quantity, safeColor, safeSize);
-                        Toast.makeText(DetailProductActivity.this, "Đã thêm vào giỏ hàng (offline)", Toast.LENGTH_SHORT).show();
+                        String errorMsg = "Lỗi thêm vào giỏ hàng";
+                        if (response.errorBody() != null) {
+                            try {
+                                String errorStr = response.errorBody().string();
+                                android.util.Log.e("AddToCart", "Error body: " + errorStr);
+                                try {
+                                    com.google.gson.JsonObject jsonObject = new com.google.gson.Gson().fromJson(errorStr, com.google.gson.JsonObject.class);
+                                    if (jsonObject.has("message")) {
+                                        errorMsg = jsonObject.get("message").getAsString();
+                                    } else if (jsonObject.has("error")) {
+                                        errorMsg = jsonObject.get("error").getAsString();
+                                    }
+                                } catch (Exception e) {
+                                    errorMsg += ": " + errorStr;
+                                }
+                            } catch (Exception e) {
+                                android.util.Log.e("AddToCart", "Error reading error body", e);
+                                errorMsg += " (Code: " + response.code() + ")";
+                            }
+                        } else {
+                            errorMsg += " (Code: " + response.code() + ")";
+                        }
+                        android.util.Log.e("AddToCart", "Failed: " + errorMsg);
+                        Toast.makeText(DetailProductActivity.this, errorMsg, Toast.LENGTH_LONG).show();
                     }
                 }
 
                 @Override
                 public void onFailure(Call<CartResponse> call, Throwable t) {
-                    // Vẫn thêm vào local cart nếu server lỗi
-                    CartManager.addToCart(currentProduct, quantity, safeColor, safeSize);
-                    Toast.makeText(DetailProductActivity.this, "Đã thêm vào giỏ hàng (offline)", Toast.LENGTH_SHORT).show();
+                    android.util.Log.e("AddToCart", "Network error: " + t.getMessage(), t);
+                    Toast.makeText(DetailProductActivity.this, "Lỗi kết nối: " + t.getMessage(), Toast.LENGTH_SHORT).show();
                 }
             });
         });
@@ -697,20 +748,9 @@ public class DetailProductActivity extends AppCompatActivity {
                 layoutAdminReply.setVisibility(View.GONE);
             }
 
-            // Display admin actions if user is admin
+            // Ẩn admin actions (chỉ dành cho khách hàng)
             LinearLayout layoutAdminActions = reviewView.findViewById(R.id.layoutAdminActions);
-            Button btnReplyReview = reviewView.findViewById(R.id.btnReplyReview);
-            Button btnDeleteReview = reviewView.findViewById(R.id.btnDeleteReview);
-            
-            UserDto currentUser = UserManager.getCurrentUser();
-            boolean isAdmin = currentUser != null && "admin".equals(currentUser.getRole());
-            
-            if (isAdmin) {
-                layoutAdminActions.setVisibility(View.VISIBLE);
-                
-                btnReplyReview.setOnClickListener(v -> showReplyDialog(review));
-                btnDeleteReview.setOnClickListener(v -> deleteReview(review));
-            } else {
+            if (layoutAdminActions != null) {
                 layoutAdminActions.setVisibility(View.GONE);
             }
 
@@ -943,21 +983,13 @@ public class DetailProductActivity extends AppCompatActivity {
             layoutStars.addView(star);
         }
 
-        // Ẩn admin reply và actions (review mới chưa có)
+        // Ẩn admin reply và actions (chỉ dành cho khách hàng)
         LinearLayout layoutAdminReply = reviewView.findViewById(R.id.layoutAdminReply);
         LinearLayout layoutAdminActions = reviewView.findViewById(R.id.layoutAdminActions);
-        layoutAdminReply.setVisibility(View.GONE);
-        
-        // Kiểm tra nếu user là admin thì hiển thị actions
-        UserDto currentUser = UserManager.getCurrentUser();
-        boolean isAdmin = currentUser != null && "admin".equals(currentUser.getRole());
-        if (isAdmin) {
-            layoutAdminActions.setVisibility(View.VISIBLE);
-            Button btnReplyReview = reviewView.findViewById(R.id.btnReplyReview);
-            Button btnDeleteReview = reviewView.findViewById(R.id.btnDeleteReview);
-            btnReplyReview.setOnClickListener(v -> showReplyDialog(review));
-            btnDeleteReview.setOnClickListener(v -> deleteReview(review));
-        } else {
+        if (layoutAdminReply != null) {
+            layoutAdminReply.setVisibility(View.GONE);
+        }
+        if (layoutAdminActions != null) {
             layoutAdminActions.setVisibility(View.GONE);
         }
 
@@ -966,92 +998,5 @@ public class DetailProductActivity extends AppCompatActivity {
         android.util.Log.d("ReviewAdd", "Review view added at position 0, total views now: " + layoutReviews.getChildCount());
     }
 
-    private void showReplyDialog(Review review) {
-        AlertDialog.Builder builder = new AlertDialog.Builder(this);
-        builder.setTitle("Trả lời đánh giá");
-
-        final EditText edtReply = new EditText(this);
-        edtReply.setHint("Nhập nội dung trả lời...");
-        edtReply.setMinLines(3);
-        if (review.getAdminReply() != null && !review.getAdminReply().isEmpty()) {
-            edtReply.setText(review.getAdminReply());
-        }
-        builder.setView(edtReply);
-
-        builder.setPositiveButton("Gửi", (dialog, which) -> {
-            String reply = edtReply.getText().toString().trim();
-            if (TextUtils.isEmpty(reply)) {
-                Toast.makeText(this, "Vui lòng nhập nội dung trả lời", Toast.LENGTH_SHORT).show();
-                return;
-            }
-            replyReview(review.getId(), reply);
-        });
-
-        builder.setNegativeButton("Hủy", (dialog, which) -> dialog.dismiss());
-        builder.show();
-    }
-
-    private void replyReview(String reviewId, String reply) {
-        String token = UserManager.getAuthToken();
-        if (token == null) {
-            Toast.makeText(this, "Vui lòng đăng nhập", Toast.LENGTH_SHORT).show();
-            return;
-        }
-
-        ReplyRequest request = new ReplyRequest(reply);
-        String authHeader = "Bearer " + token;
-
-        ApiClient.getApiService().replyReview(authHeader, reviewId, request).enqueue(new Callback<Review>() {
-            @Override
-            public void onResponse(Call<Review> call, Response<Review> response) {
-                if (response.isSuccessful()) {
-                    Toast.makeText(DetailProductActivity.this, "Trả lời thành công!", Toast.LENGTH_SHORT).show();
-                    loadReviews(productId);
-                } else {
-                    Toast.makeText(DetailProductActivity.this, "Lỗi: " + response.message(), Toast.LENGTH_SHORT).show();
-                }
-            }
-
-            @Override
-            public void onFailure(Call<Review> call, Throwable t) {
-                Toast.makeText(DetailProductActivity.this, "Lỗi kết nối: " + t.getMessage(), Toast.LENGTH_SHORT).show();
-                t.printStackTrace();
-            }
-        });
-    }
-
-    private void deleteReview(Review review) {
-        new AlertDialog.Builder(this)
-                .setTitle("Xác nhận xóa")
-                .setMessage("Bạn có chắc chắn muốn xóa đánh giá này?")
-                .setPositiveButton("Xóa", (dialog, which) -> {
-                    String token = UserManager.getAuthToken();
-                    if (token == null) {
-                        Toast.makeText(this, "Vui lòng đăng nhập", Toast.LENGTH_SHORT).show();
-                        return;
-                    }
-
-                    String authHeader = "Bearer " + token;
-                    ApiClient.getApiService().deleteReview(authHeader, review.getId()).enqueue(new Callback<ReviewResponse>() {
-                        @Override
-                        public void onResponse(Call<ReviewResponse> call, Response<ReviewResponse> response) {
-                            if (response.isSuccessful()) {
-                                Toast.makeText(DetailProductActivity.this, "Xóa đánh giá thành công!", Toast.LENGTH_SHORT).show();
-                                loadReviews(productId);
-                                loadProductRating(productId);
-                            } else {
-                                Toast.makeText(DetailProductActivity.this, "Lỗi: " + response.message(), Toast.LENGTH_SHORT).show();
-                            }
-                        }
-
-                        @Override
-                        public void onFailure(Call<ReviewResponse> call, Throwable t) {
-                            Toast.makeText(DetailProductActivity.this, "Lỗi kết nối: " + t.getMessage(), Toast.LENGTH_SHORT).show();
-                            t.printStackTrace();
-                        }
-                    });
-                })
-                .setNegativeButton("Hủy", null)
-                .show();
-    }
+    // Admin functions removed - chỉ dành cho khách hàng
 }

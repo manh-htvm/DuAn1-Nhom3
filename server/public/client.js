@@ -51,7 +51,7 @@ class AdminClient {
 
       const response = await fetch(url, {
         method: 'GET',
-        headers: { 'Content-Type': 'application/json' }
+        headers: this.getHeaders() // Gửi token để backend nhận diện admin
       });
 
       return await this.handleResponse(response);
@@ -372,6 +372,35 @@ class AdminClient {
   }
 
   /**
+   * Toggle ẩn/hiện đánh giá
+   * @param {string} reviewId - ID đánh giá
+   */
+  async toggleReviewVisibility(reviewId) {
+    try {
+      const url = `${this.baseURL}/api/reviews/${reviewId}/toggle-visibility`;
+      console.log('🔄 Toggling review visibility:', url);
+      
+      const response = await fetch(url, {
+        method: 'PUT',
+        headers: this.getHeaders()
+      });
+
+      // Kiểm tra nếu response không phải JSON
+      const contentType = response.headers.get('content-type');
+      if (!contentType || !contentType.includes('application/json')) {
+        const text = await response.text();
+        console.error('❌ Server returned non-JSON response:', text.substring(0, 200));
+        throw new Error(`Server trả về lỗi: ${response.status} ${response.statusText}`);
+      }
+
+      return await this.handleResponse(response);
+    } catch (error) {
+      console.error('❌ Error toggling review visibility:', error);
+      throw new Error(`Lỗi ẩn/hiện đánh giá: ${error.message}`);
+    }
+  }
+
+  /**
    * Xóa đánh giá
    * @param {string} reviewId - ID đánh giá
    */
@@ -415,13 +444,14 @@ class AdminClient {
   /**
    * Cập nhật trạng thái đơn hàng
    * @param {string} orderId - ID đơn hàng
-   * @param {string} status - Trạng thái mới: 'pending', 'processing', 'shipped', 'delivered', 'cancelled'
+   * @param {string} status - Trạng thái mới: 'pending', 'shipped', 'delivered' (bỏ processing và cancelled)
    */
   async updateOrderStatus(orderId, status) {
     try {
-      const validStatuses = ['pending', 'processing', 'shipped', 'delivered', 'cancelled'];
+      // Chỉ cho phép các trạng thái hợp lệ theo backend
+      const validStatuses = ['pending', 'shipped', 'delivered'];
       if (!validStatuses.includes(status)) {
-        throw new Error(`Trạng thái không hợp lệ. Phải là một trong: ${validStatuses.join(', ')}`);
+        throw new Error(`Trạng thái không hợp lệ. Chỉ cho phép: Chờ xác nhận (pending), Đang giao (shipped), Hoàn thành (delivered)`);
       }
 
       const response = await fetch(`${this.baseURL}/api/orders/${orderId}/status`, {

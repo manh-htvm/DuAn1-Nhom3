@@ -21,6 +21,8 @@ import retrofit2.Call;
 import retrofit2.Callback;
 import retrofit2.Response;
 
+import java.util.regex.Pattern;
+
 public class RegisterActivity extends AppCompatActivity {
 
     private EditText nameEditText, emailEditText, passwordEditText, confirmPasswordEditText;
@@ -60,6 +62,11 @@ public class RegisterActivity extends AppCompatActivity {
 
         if (name.isEmpty() || email.isEmpty() || password.isEmpty() || confirmPassword.isEmpty()) {
             Toast.makeText(this, "Vui lòng nhập đầy đủ thông tin", Toast.LENGTH_SHORT).show();
+            return;
+        }
+
+        if (!isValidEmail(email)) {
+            Toast.makeText(this, "Email không đúng định dạng", Toast.LENGTH_SHORT).show();
             return;
         }
 
@@ -103,5 +110,10 @@ public class RegisterActivity extends AppCompatActivity {
         } catch (Exception ignored) {
         }
         return "Vui lòng thử lại";
+    }
+
+    private boolean isValidEmail(String email) {
+        String emailPattern = "^[A-Za-z0-9+_.-]+@[A-Za-z0-9.-]+\\.[A-Za-z]{2,}$";
+        return Pattern.matches(emailPattern, email);
     }
 }

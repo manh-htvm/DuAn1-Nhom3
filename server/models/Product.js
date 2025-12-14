@@ -21,6 +21,7 @@ const productSchema = new mongoose.Schema({
   colors: { type: [String], default: [] },
   sizes: { type: [String], default: [] },
   variants: { type: [variantSchema], default: [] }, // Stock theo từng biến thể (màu + size)
+  isActive: { type: Boolean, default: true }, // Ẩn/hiện sản phẩm (true = hiện, false = ẩn)
   createdAt: { type: Date, default: Date.now },
   updatedAt: { type: Date, default: Date.now }
 });

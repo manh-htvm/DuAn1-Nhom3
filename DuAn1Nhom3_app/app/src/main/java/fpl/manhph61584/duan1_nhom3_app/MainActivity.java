@@ -46,6 +46,9 @@ public class MainActivity extends AppCompatActivity {
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
 
+        // Khôi phục session nếu có (remember me)
+        UserManager.restoreSession(this);
+
         try {
             setContentView(R.layout.activity_main);
             Log.d("MainActivity", "✅ Layout loaded");
@@ -116,6 +119,9 @@ public class MainActivity extends AppCompatActivity {
             // Load categories và sản phẩm
             loadCategories();
             loadProducts(null, null);
+            
+            // Load giỏ hàng từ server nếu đã đăng nhập
+            loadCartFromServer();
 
             // Tìm kiếm
             if (edtSearch != null) {

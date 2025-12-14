@@ -34,28 +34,30 @@ const upload = multer({
   fileFilter,
 });
 
+/**
+ * Tạo sản phẩm mới
+ */
 router.post("/", verifyToken, requireAdmin, upload.single("image"), async (req, res) => {
   try {
     const imagePath = req.file ? `/uploads/${req.file.filename}` : req.body.image;
     const { name, description, price, stock, category, colors, sizes } = req.body;
 
-    // Parse colors và sizes thành mảng
     let colorsArray = [];
     let sizesArray = [];
 
     if (colors) {
       if (typeof colors === 'string') {
-        // Nếu là string JSON, parse nó
+
         try {
           colorsArray = JSON.parse(colors);
         } catch (e) {
-          // Nếu không phải JSON, coi như là một giá trị đơn
+
           colorsArray = [colors];
         }
       } else if (Array.isArray(colors)) {
         colorsArray = colors;
       }
-      // Lọc bỏ giá trị rỗng
+
       colorsArray = colorsArray.filter(c => c && c.trim() !== '');
     }
 
@@ -69,11 +71,10 @@ router.post("/", verifyToken, requireAdmin, upload.single("image"), async (req, 
       } else if (Array.isArray(sizes)) {
         sizesArray = sizes;
       }
-      // Lọc bỏ giá trị rỗng
+
       sizesArray = sizesArray.filter(s => s && s.trim() !== '');
     }
 
-    // Parse variants nếu có
     let variantsArray = [];
     if (req.body.variants) {
       try {
@@ -83,7 +84,7 @@ router.post("/", verifyToken, requireAdmin, upload.single("image"), async (req, 
           variantsArray = req.body.variants;
         }
       } catch (e) {
-        // Nếu không parse được, bỏ qua
+
       }
     }
 
@@ -98,10 +99,11 @@ router.post("/", verifyToken, requireAdmin, upload.single("image"), async (req, 
       colors: colorsArray,
       sizes: sizesArray,
       variants: variantsArray,
+      isActive: req.body.isActive !== undefined ? req.body.isActive : true,
     });
     res.status(201).json(product);
   } catch (err) {
-    // Handle duplicate key errors (especially for old variant indexes)
+
     if (err.code === 11000 || err.message.includes('duplicate key')) {
       const errorMessage = err.message.includes('variants') 
         ? 'Lỗi: Index cũ trong database đang gây xung đột. Vui lòng chạy script fix-indexes.js để sửa lỗi này.'
@@ -116,11 +118,28 @@ router.post("/", verifyToken, requireAdmin, upload.single("image"), async (req, 
   }
 });
 
-// Lấy danh sách sản phẩm
 router.get("/", async (req, res) => {
   try {
     const { search, category } = req.query;
     const query = {};
+
+    const token = req.headers.authorization?.replace('Bearer ', '');
+    let isAdmin = false;
+    
+    if (token) {
+      try {
+        const jwt = require('jsonwebtoken');
+        const JWT_SECRET = process.env.JWT_SECRET || 'secret_key';
+        const decoded = jwt.verify(token, JWT_SECRET);
+        isAdmin = decoded.role === 'admin';
+      } catch (e) {
+
+      }
+    }
+
+    if (!isAdmin) {
+      query.isActive = { $ne: false };
+    }
     
     if (search) {
       query.name = { $regex: search, $options: "i" };
@@ -137,20 +156,36 @@ router.get("/", async (req, res) => {
   }
 });
 
-// Xem chi tiết sản phẩm
 router.get("/:id", async (req, res) => {
   try {
+
+    const token = req.headers.authorization?.replace('Bearer ', '');
+    let isAdmin = false;
+    
+    if (token) {
+      try {
+        const jwt = require('jsonwebtoken');
+        const JWT_SECRET = process.env.JWT_SECRET || 'secret_key';
+        const decoded = jwt.verify(token, JWT_SECRET);
+        isAdmin = decoded.role === 'admin';
+      } catch (e) {
+
+      }
+    }
+    
     const product = await Product.findById(req.params.id).populate("category");
     if (!product) return res.status(404).json({ message: "Không tìm thấy sản phẩm" });
+
+    if (!isAdmin && product.isActive === false) {
+      return res.status(404).json({ message: "Không tìm thấy sản phẩm" });
+    }
+    
     res.json(product);
   } catch (err) {
     res.status(500).json({ error: err.message });
   }
 });
 
-// Lấy số lượng tồn kho theo màu và size
-// GET /api/products/:id/stock?color=Đỏ&size=M
-// Nếu không có color và size: trả về tổng stock
 router.get("/:id/stock", async (req, res) => {
   try {
     const { color, size } = req.query;
@@ -160,7 +195,6 @@ router.get("/:id/stock", async (req, res) => {
       return res.status(404).json({ message: "Không tìm thấy sản phẩm" });
     }
 
-    // Nếu không có color và size, trả về tổng stock
     if (!color && !size) {
       return res.json({ 
         stock: product.stock || 0,
@@ -168,7 +202,6 @@ router.get("/:id/stock", async (req, res) => {
       });
     }
 
-    // Tìm variant theo color và size
     const normalizedColor = color || "Mặc định";
     const normalizedSize = size || "Free size";
     
@@ -185,7 +218,6 @@ router.get("/:id/stock", async (req, res) => {
       });
     }
 
-    // Nếu không tìm thấy variant, trả về 0
     return res.json({ 
       stock: 0,
       color: normalizedColor,
@@ -196,7 +228,6 @@ router.get("/:id/stock", async (req, res) => {
   }
 });
 
-// Cập nhật sản phẩm
 router.put("/:id", verifyToken, requireAdmin, upload.single("image"), async (req, res) => {
   try {
     const productId = req.params.id;
@@ -206,12 +237,10 @@ router.put("/:id", verifyToken, requireAdmin, upload.single("image"), async (req
       return res.status(404).json({ message: "Không tìm thấy sản phẩm" });
     }
 
-    // Cập nhật image nếu có file mới (chỉ cập nhật nếu có file thực sự, không phải empty part)
     if (req.file && req.file.filename) {
       product.image = `/uploads/${req.file.filename}`;
     }
 
-    // Cập nhật các trường khác
     if (req.body.name) product.name = req.body.name;
     if (req.body.description !== undefined) product.description = req.body.description;
     if (req.body.price) product.price = Number(req.body.price);
@@ -219,7 +248,6 @@ router.put("/:id", verifyToken, requireAdmin, upload.single("image"), async (req
     if (req.body.sold !== undefined) product.sold = Number(req.body.sold);
     if (req.body.category) product.category = req.body.category;
 
-    // Parse colors và sizes
     if (req.body.colors !== undefined) {
       let colorsArray = [];
       if (typeof req.body.colors === 'string') {
@@ -248,7 +276,6 @@ router.put("/:id", verifyToken, requireAdmin, upload.single("image"), async (req
       product.sizes = sizesArray.filter(s => s && s.trim() !== '');
     }
 
-    // Parse variants nếu có
     if (req.body.variants !== undefined) {
       try {
         if (typeof req.body.variants === 'string') {
@@ -257,7 +284,7 @@ router.put("/:id", verifyToken, requireAdmin, upload.single("image"), async (req
           product.variants = req.body.variants;
         }
       } catch (e) {
-        // Ignore parse error
+
       }
     }
 
@@ -270,17 +297,24 @@ router.put("/:id", verifyToken, requireAdmin, upload.single("image"), async (req
   }
 });
 
-// Xóa sản phẩm
 router.delete("/:id", verifyToken, requireAdmin, async (req, res) => {
   try {
     const productId = req.params.id;
-    const product = await Product.findByIdAndDelete(productId);
+    const product = await Product.findById(productId);
     
     if (!product) {
       return res.status(404).json({ message: "Không tìm thấy sản phẩm" });
     }
 
-    res.json({ message: "Đã xóa sản phẩm thành công" });
+    product.isActive = !product.isActive;
+    product.updatedAt = new Date();
+    await product.save();
+
+    const status = product.isActive ? "hiển thị" : "ẩn";
+    res.json({ 
+      message: `Đã ${status} sản phẩm thành công`,
+      product: product
+    });
   } catch (err) {
     res.status(500).json({ error: err.message });
   }

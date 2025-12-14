@@ -28,7 +28,6 @@ router.get('/', verifyToken, async (req, res) => {
 
 /**
  * Thêm sản phẩm vào giỏ
- * Body: { productId, quantity, color, size }
  */
 router.post('/', verifyToken, async (req, res) => {
   try {
@@ -55,7 +54,7 @@ router.post('/', verifyToken, async (req, res) => {
         items: [{ product: productId, quantity: qty, color: safeColor, size: safeSize }],
       });
     } else {
-      // Tìm item cùng product, color và size
+
       const item = cart.items.find(
         (cartItem) => 
           cartItem.product.toString() === productId &&
@@ -84,17 +83,19 @@ router.post('/', verifyToken, async (req, res) => {
 
 /**
  * Cập nhật số lượng sản phẩm trong giỏ
- * Body: { quantity }
  */
 router.put('/:productId', verifyToken, async (req, res) => {
   try {
     const { productId } = req.params;
-    const { quantity } = req.body;
+    const { quantity, color, size } = req.body;
 
     const qty = Number(quantity);
     if (!qty || qty < 1) {
       return res.status(400).json({ message: 'Số lượng phải lớn hơn 0' });
     }
+
+    const safeColor = color && color.trim() !== '' ? color.trim() : 'Mặc định';
+    const safeSize = size && size.trim() !== '' ? size.trim() : 'Free size';
 
     const cart = await Cart.findOne({ user: req.user.id });
     if (!cart) {
@@ -102,11 +103,14 @@ router.put('/:productId', verifyToken, async (req, res) => {
     }
 
     const item = cart.items.find(
-      (cartItem) => cartItem.product.toString() === productId
+      (cartItem) => 
+        cartItem.product.toString() === productId &&
+        cartItem.color === safeColor &&
+        cartItem.size === safeSize
     );
 
     if (!item) {
-      return res.status(404).json({ message: 'Sản phẩm không có trong giỏ' });
+      return res.status(404).json({ message: 'Sản phẩm với màu và size này không có trong giỏ' });
     }
 
     item.quantity = qty;
@@ -128,6 +132,13 @@ router.put('/:productId', verifyToken, async (req, res) => {
 router.delete('/:productId', verifyToken, async (req, res) => {
   try {
     const { productId } = req.params;
+
+    const color = req.body?.color || req.query?.color;
+    const size = req.body?.size || req.query?.size;
+    
+    const safeColor = color && color.trim() !== '' ? color.trim() : 'Mặc định';
+    const safeSize = size && size.trim() !== '' ? size.trim() : 'Free size';
+
     const cart = await Cart.findOne({ user: req.user.id });
 
     if (!cart) {
@@ -135,12 +146,16 @@ router.delete('/:productId', verifyToken, async (req, res) => {
     }
 
     const initialLength = cart.items.length;
+
     cart.items = cart.items.filter(
-      (item) => item.product.toString() !== productId
+      (item) => 
+        !(item.product.toString() === productId &&
+          item.color === safeColor &&
+          item.size === safeSize)
     );
 
     if (cart.items.length === initialLength) {
-      return res.status(404).json({ message: 'Sản phẩm không có trong giỏ' });
+      return res.status(404).json({ message: 'Sản phẩm với màu và size này không có trong giỏ' });
     }
 
     await cart.save();

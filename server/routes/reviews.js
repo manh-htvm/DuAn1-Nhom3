@@ -7,7 +7,6 @@ const router = express.Router();
 
 /**
  * Tạo đánh giá mới
- * Body: { user, product, rating, comment }
  */
 router.post('/', verifyToken, async (req, res) => {
   try {
@@ -16,7 +15,6 @@ router.post('/', verifyToken, async (req, res) => {
       userId: req.user?.id
     });
 
-    // Hỗ trợ cả productId (từ Android) và product (từ web)
     const productId = req.body.productId || req.body.product;
     const rating = req.body.rating;
     const comment = req.body.comment;
@@ -50,7 +48,6 @@ router.post('/', verifyToken, async (req, res) => {
       });
     }
 
-    // Kiểm tra user đã mua sản phẩm này chưa (chỉ cho phép đánh giá sau khi đã mua)
     const Order = require('../models/Order');
     const hasPurchased = await Order.findOne({
       user: userId,
@@ -66,13 +63,11 @@ router.post('/', verifyToken, async (req, res) => {
       });
     }
 
-    // Kiểm tra xem user đã đánh giá sản phẩm này chưa
     const existingReview = await Review.findOne({ user: userId, product: productId });
     if (existingReview) {
       return res.status(409).json({ message: 'Bạn đã đánh giá sản phẩm này rồi' });
     }
 
-    // Tạo review mới và lưu vào MongoDB
     const review = await Review.create({
       user: userId,
       product: productId,
@@ -82,6 +77,10 @@ router.post('/', verifyToken, async (req, res) => {
       updatedAt: new Date()
     });
 
+    const populatedReview = await Review.findById(review._id)
+      .populate('user', 'name email')
+      .populate('product', 'name image');
+
     console.log('✅ Review đã được lưu vào MongoDB:', {
       reviewId: review._id,
       userId: userId,
@@ -90,12 +89,6 @@ router.post('/', verifyToken, async (req, res) => {
       comment: review.comment
     });
 
-    // Populate để trả về đầy đủ thông tin
-    const populatedReview = await Review.findById(review._id)
-      .populate('user', 'name email')
-      .populate('product', 'name image');
-
-    // Trả về review đã được lưu vào MongoDB với format ReviewResponse
     res.status(201).json({
       message: 'Đánh giá thành công',
       review: populatedReview
@@ -112,7 +105,6 @@ router.post('/', verifyToken, async (req, res) => {
 
 /**
  * Lấy danh sách đánh giá
- * Query params: ?product=productId, ?user=userId
  */
 router.get('/', async (req, res) => {
   try {
@@ -125,6 +117,8 @@ router.get('/', async (req, res) => {
     if (user) {
       query.user = user;
     }
+
+    query.isHidden = { $ne: true };
 
     const reviews = await Review.find(query)
       .populate('user', 'name email')
@@ -139,7 +133,6 @@ router.get('/', async (req, res) => {
 
 /**
  * Admin quản lý đánh giá
- * Query params: ?product=productId, ?user=userId, ?rating=number
  */
 router.get('/admin/manage', verifyToken, requireAdmin, async (req, res) => {
   try {
@@ -162,7 +155,7 @@ router.get('/admin/manage', verifyToken, requireAdmin, async (req, res) => {
 });
 
 /**
- * Lấy rating trung bình và tổng số đánh giá theo productId (phải đặt trước /product/:productId để tránh conflict)
+ * Lấy rating trung bình và tổng số đánh giá theo productId
  */
 router.get('/product/:productId/rating', async (req, res) => {
   try {
@@ -172,7 +165,6 @@ router.get('/product/:productId/rating', async (req, res) => {
     console.log('📊 Received productId:', productId);
     console.log('📊 ProductId type:', typeof productId);
     
-    // Convert string productId to ObjectId để match với MongoDB
     let query;
     try {
       const objectId = new mongoose.Types.ObjectId(productId);
@@ -185,9 +177,9 @@ router.get('/product/:productId/rating', async (req, res) => {
     }
     
     console.log('🔍 Rating query:', JSON.stringify(query));
-    
-    // Tính toán average rating và total reviews từ MongoDB
-    const reviews = await Review.find(query);
+
+    const reviewQuery = { ...query, isHidden: { $ne: true } };
+    const reviews = await Review.find(reviewQuery);
     const totalReviews = reviews.length;
     
     console.log('📊 Found', totalReviews, 'reviews in MongoDB for productId:', productId);
@@ -200,15 +192,13 @@ router.get('/product/:productId/rating', async (req, res) => {
         totalReviews: 0
       });
     }
-    
-    // Tính tổng số sao từ tất cả reviews trong MongoDB
+
     const sumRating = reviews.reduce((sum, review) => {
       const rating = review.rating || 0;
       console.log('📊 Review rating:', rating);
       return sum + rating;
     }, 0);
-    
-    // Tính số sao trung bình
+
     const averageRating = sumRating / totalReviews;
     
     console.log('📊 Rating calculated from MongoDB:');
@@ -234,7 +224,7 @@ router.get('/product/:productId/rating', async (req, res) => {
 });
 
 /**
- * Lấy đánh giá theo productId (phải đặt trước /:id để tránh conflict)
+ * Lấy đánh giá theo productId
  */
 router.get('/product/:productId', async (req, res) => {
   try {
@@ -244,23 +234,22 @@ router.get('/product/:productId', async (req, res) => {
     console.log('📥 Received productId:', productId);
     console.log('📥 ProductId type:', typeof productId);
     
-    // Convert string productId to ObjectId để match với MongoDB
     let query;
     try {
-      // Thử convert sang ObjectId
       const objectId = new mongoose.Types.ObjectId(productId);
       query = { product: objectId };
       console.log('✅ Using ObjectId query:', objectId.toString());
     } catch (e) {
-      // Nếu không phải ObjectId hợp lệ, dùng string
       query = { product: productId };
       console.log('⚠️ Using string query:', productId);
       console.log('⚠️ Error converting to ObjectId:', e.message);
     }
     
     console.log('🔍 Query:', JSON.stringify(query));
+
+    const reviewQuery = { ...query, isHidden: { $ne: true } };
     
-    const reviews = await Review.find(query)
+    const reviews = await Review.find(reviewQuery)
       .populate('user', 'name email')
       .populate('product', 'name image')
       .sort({ createdAt: -1 });
@@ -290,7 +279,38 @@ router.get('/product/:productId', async (req, res) => {
 });
 
 /**
- * Admin trả lời đánh giá (phải đặt trước /:id để tránh conflict)
+ * Admin toggle ẩn/hiện đánh giá
+ */
+router.put('/:id/toggle-visibility', verifyToken, requireAdmin, async (req, res) => {
+  try {
+    console.log('🔄 Toggle review visibility:', req.params.id);
+    
+    const review = await Review.findById(req.params.id);
+
+    if (!review) {
+      console.log('❌ Review not found:', req.params.id);
+      return res.status(404).json({ message: 'Không tìm thấy đánh giá' });
+    }
+
+    const oldStatus = review.isHidden;
+    review.isHidden = !review.isHidden;
+    review.updatedAt = Date.now();
+    await review.save();
+
+    
+    const populatedReview = await Review.findById(review._id)
+      .populate('user', 'name email')
+      .populate('product', 'name image');
+
+    res.json(populatedReview);
+  } catch (error) {
+    console.error('❌ Error toggling review visibility:', error);
+    res.status(400).json({ error: error.message });
+  }
+});
+
+/**
+ * Admin trả lời đánh giá
  */
 router.post('/:id/reply', verifyToken, requireAdmin, async (req, res) => {
   try {
@@ -339,7 +359,6 @@ router.get('/:id', async (req, res) => {
 
 /**
  * Cập nhật đánh giá
- * Body: { rating, comment }
  */
 router.put('/:id', verifyToken, requireAdmin, async (req, res) => {
   try {

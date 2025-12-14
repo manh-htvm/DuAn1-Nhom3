@@ -81,10 +81,9 @@ public class CartAdapter extends RecyclerView.Adapter<CartAdapter.CartViewHolder
         Product product = item.getProduct();
 
         holder.txtName.setText(product.getName());
-        holder.txtPrice.setText(String.format("%,.0f₫", item.getUnitPrice()));
+        holder.txtPrice.setText(String.format("%,.0f₫", item.getSubtotal())); // Hiển thị tổng tiền của item
         holder.txtQuantity.setText("Số lượng: " + item.getQuantity());
         holder.txtVariant.setText("Màu: " + item.getColor() + " | Size: " + item.getSize());
-        holder.txtSubtotal.setText(String.format("%,.0f₫", item.getSubtotal()));
 
         String imageUrl = product.getImage();
         if (imageUrl != null && imageUrl.startsWith("/uploads/")) {
@@ -137,17 +136,16 @@ public class CartAdapter extends RecyclerView.Adapter<CartAdapter.CartViewHolder
     static class CartViewHolder extends RecyclerView.ViewHolder {
         AppCompatCheckBox checkboxItem;
         ImageView imgProduct;
-        TextView txtName, txtPrice, txtQuantity, txtVariant, txtSubtotal;
+        TextView txtName, txtPrice, txtQuantity, txtVariant;
 
         CartViewHolder(@NonNull View itemView) {
             super(itemView);
             checkboxItem = itemView.findViewById(R.id.checkboxItem);
-            imgProduct = itemView.findViewById(R.id.cartImgProduct);
-            txtName = itemView.findViewById(R.id.cartTxtName);
-            txtPrice = itemView.findViewById(R.id.cartTxtPrice);
-            txtQuantity = itemView.findViewById(R.id.cartTxtQuantity);
-            txtVariant = itemView.findViewById(R.id.cartTxtVariant);
-            txtSubtotal = itemView.findViewById(R.id.cartTxtSubtotal);
+            imgProduct = itemView.findViewById(R.id.orderImgProduct);
+            txtName = itemView.findViewById(R.id.orderTxtName);
+            txtPrice = itemView.findViewById(R.id.orderTxtPrice);
+            txtQuantity = itemView.findViewById(R.id.orderTxtQuantity);
+            txtVariant = itemView.findViewById(R.id.orderTxtVariant);
         }
     }
 }

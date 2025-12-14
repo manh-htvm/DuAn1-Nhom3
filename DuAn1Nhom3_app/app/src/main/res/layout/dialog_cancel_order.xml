@@ -1,0 +1,73 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="match_parent"
+    android:layout_height="wrap_content"
+    android:orientation="vertical"
+    android:padding="16dp">
+
+    <TextView
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:text="Vui lòng chọn lý do hủy đơn hàng"
+        android:textSize="16sp"
+        android:textStyle="bold"
+        android:layout_marginBottom="16dp" />
+
+    <RadioGroup
+        android:id="@+id/radioGroupCancelReason"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="vertical">
+
+        <RadioButton
+            android:id="@+id/radioChangeMind"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:text="Thay đổi ý định"
+            android:padding="8dp" />
+
+        <RadioButton
+            android:id="@+id/radioWrongProduct"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:text="Đặt nhầm sản phẩm"
+            android:padding="8dp" />
+
+        <RadioButton
+            android:id="@+id/radioFoundCheaper"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:text="Tìm thấy sản phẩm rẻ hơn"
+            android:padding="8dp" />
+
+        <RadioButton
+            android:id="@+id/radioOther"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:text="Khác"
+            android:padding="8dp" />
+
+    </RadioGroup>
+
+    <EditText
+        android:id="@+id/edtOtherReason"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="12dp"
+        android:hint="Nhập lý do hủy đơn..."
+        android:inputType="textMultiLine"
+        android:minLines="3"
+        android:maxLines="5"
+        android:visibility="gone"
+        android:padding="12dp"
+        android:background="@android:drawable/edit_text" />
+
+</LinearLayout>
+
+
+
+
+
+
+
+

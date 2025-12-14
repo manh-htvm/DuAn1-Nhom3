@@ -8,9 +8,13 @@ const { verifyToken, requireAdmin } = require('../middleware/auth');
 const router = express.Router();
 const JWT_SECRET = process.env.JWT_SECRET || 'secret_key';
 
+function isValidEmail(email) {
+  const emailPattern = /^[A-Za-z0-9+_.-]+@[A-Za-z0-9.-]+\.[A-Za-z]{2,}$/;
+  return emailPattern.test(email);
+}
+
 /**
  * Đăng ký người dùng mới
- * Body: { name, email, password }
  */
 router.post('/register', async (req, res) => {
   try {
@@ -18,6 +22,10 @@ router.post('/register', async (req, res) => {
 
     if (!name || !email || !password) {
       return res.status(400).json({ message: 'Vui lòng nhập đủ tên, email và mật khẩu' });
+    }
+
+    if (!isValidEmail(email)) {
+      return res.status(400).json({ message: 'Email không đúng định dạng' });
     }
 
     const existingUser = await User.findOne({ email });
@@ -28,11 +36,10 @@ router.post('/register', async (req, res) => {
     const hashedPassword = await bcrypt.hash(password, 10);
     const newUser = await User.create({ name, email, password: hashedPassword });
 
-    // Tự động tạo voucher 50% vĩnh viễn cho user mới
     try {
       const voucherCode = `WELCOME${newUser._id.toString().substring(0, 8).toUpperCase()}`;
       const now = new Date();
-      const foreverDate = new Date('2099-12-31T23:59:59.999Z'); // Vĩnh viễn
+      const foreverDate = new Date('2099-12-31T23:59:59.999Z');
 
       await Voucher.create({
         code: voucherCode,
@@ -44,14 +51,12 @@ router.post('/register', async (req, res) => {
         maxDiscountAmount: null,
         startDate: now,
         endDate: foreverDate,
-        usageLimit: null, // Không giới hạn lượt sử dụng
+        usageLimit: null,
         usedCount: 0,
         isActive: true,
-        user: newUser._id // Voucher thuộc về user này
+        user: newUser._id
       });
     } catch (voucherError) {
-      // Nếu tạo voucher thất bại, vẫn cho phép đăng ký thành công
-      console.error('Lỗi tạo voucher cho user mới:', voucherError);
     }
 
     res.status(201).json({
@@ -71,7 +76,6 @@ router.post('/register', async (req, res) => {
 
 /**
  * Đăng nhập
- * Body: { email, password }
  */
 router.post('/login', async (req, res) => {
   try {
@@ -81,9 +85,17 @@ router.post('/login', async (req, res) => {
       return res.status(400).json({ message: 'Vui lòng nhập email và mật khẩu' });
     }
 
+    if (!isValidEmail(email)) {
+      return res.status(400).json({ message: 'Email không đúng định dạng' });
+    }
+
     const user = await User.findOne({ email });
     if (!user) {
       return res.status(404).json({ message: 'Không tìm thấy người dùng' });
+    }
+
+    if (user.isLocked) {
+      return res.status(403).json({ message: 'Tài khoản của bạn đã bị khóa. Vui lòng liên hệ quản trị viên.' });
     }
 
     const isMatch = await bcrypt.compare(password, user.password);
@@ -91,13 +103,11 @@ router.post('/login', async (req, res) => {
       return res.status(401).json({ message: 'Sai mật khẩu' });
     }
 
-    // Đảm bảo token luôn có role
     const tokenPayload = {
       id: user._id,
-      role: user.role || 'user' // Mặc định là 'user' nếu không có role
+      role: user.role || 'user'
     };
-    console.log('🔑 Creating JWT token with payload:', tokenPayload);
-    const token = jwt.sign(tokenPayload, JWT_SECRET, { expiresIn: '24h' }); // Tăng thời gian hết hạn lên 24h
+    const token = jwt.sign(tokenPayload, JWT_SECRET, { expiresIn: '24h' });
 
     res.json({
       message: 'Đăng nhập thành công',
@@ -117,7 +127,6 @@ router.post('/login', async (req, res) => {
 
 /**
  * Lấy thông tin profile của user hiện tại
- * Headers: Authorization: Bearer <token>
  */
 router.get('/profile', verifyToken, async (req, res) => {
   try {
@@ -138,22 +147,15 @@ router.get('/profile', verifyToken, async (req, res) => {
       }
     });
   } catch (err) {
-    console.error('❌ Error getting profile:', err);
     res.status(500).json({ message: 'Lỗi server', error: err.message });
   }
 });
 
 /**
- * Cập nhật thông tin profile (name và avatar)
- * Headers: Authorization: Bearer <token>
- * Body: { name?, avatar? }
+ * Cập nhật thông tin profile
  */
 router.put('/profile', verifyToken, async (req, res) => {
   try {
-    console.log('📝 PUT /api/users/profile - Received request');
-    console.log('📝 User ID from token:', req.user.id);
-    console.log('📝 Request body:', req.body);
-    
     const userId = req.user.id;
     const { name, avatar } = req.body;
 
@@ -180,7 +182,6 @@ router.put('/profile', verifyToken, async (req, res) => {
       return res.status(404).json({ message: 'Không tìm thấy người dùng' });
     }
 
-    console.log('✅ Profile updated successfully');
     res.json({
       message: 'Cập nhật profile thành công',
       user: {
@@ -192,14 +193,12 @@ router.put('/profile', verifyToken, async (req, res) => {
       }
     });
   } catch (err) {
-    console.error('❌ Error updating profile:', err);
     res.status(500).json({ message: 'Lỗi server', error: err.message });
   }
 });
 
 /**
  * Admin lấy tất cả users
- * Headers: Authorization: Bearer <token>
  */
 router.get('/admin/all', verifyToken, requireAdmin, async (req, res) => {
   try {
@@ -210,18 +209,16 @@ router.get('/admin/all', verifyToken, requireAdmin, async (req, res) => {
       email: user.email,
       role: user.role,
       avatar: user.avatar || null,
+      isLocked: user.isLocked || false,
       createdAt: user.createdAt
     })));
   } catch (err) {
-    console.error('❌ Error getting all users:', err);
     res.status(500).json({ message: 'Lỗi server', error: err.message });
   }
 });
 
 /**
  * Admin cập nhật role của user
- * Headers: Authorization: Bearer <token>
- * Body: { role: 'user'|'admin' }
  */
 router.put('/admin/:id/role', verifyToken, requireAdmin, async (req, res) => {
   try {
@@ -232,48 +229,73 @@ router.put('/admin/:id/role', verifyToken, requireAdmin, async (req, res) => {
       return res.status(400).json({ message: 'Role không hợp lệ' });
     }
 
-    const user = await User.findByIdAndUpdate(
+    const user = await User.findById(userId);
+
+    if (!user) {
+      return res.status(404).json({ message: 'Không tìm thấy người dùng' });
+    }
+
+    if (user.role === 'admin' && role === 'user') {
+      return res.status(400).json({ message: 'Không thể đổi tài khoản admin thành người dùng' });
+    }
+
+    const updatedUser = await User.findByIdAndUpdate(
       userId,
       { $set: { role: role, updatedAt: new Date() } },
       { new: true }
     );
 
-    if (!user) {
-      return res.status(404).json({ message: 'Không tìm thấy người dùng' });
-    }
-
     res.json({
       message: 'Đã cập nhật role thành công',
       user: {
-        id: user._id,
-        name: user.name,
-        email: user.email,
-        role: user.role,
-        avatar: user.avatar || null
+        id: updatedUser._id,
+        name: updatedUser.name,
+        email: updatedUser.email,
+        role: updatedUser.role,
+        avatar: updatedUser.avatar || null
       }
     });
   } catch (err) {
-    console.error('❌ Error updating user role:', err);
     res.status(500).json({ message: 'Lỗi server', error: err.message });
   }
 });
 
 /**
- * Admin xóa user
- * Headers: Authorization: Bearer <token>
+ * Admin khóa/mở khóa tài khoản user
  */
 router.delete('/admin/:id', verifyToken, requireAdmin, async (req, res) => {
   try {
     const userId = req.params.id;
-    const user = await User.findByIdAndDelete(userId);
+    const user = await User.findById(userId);
 
     if (!user) {
       return res.status(404).json({ message: 'Không tìm thấy người dùng' });
     }
 
-    res.json({ message: 'Đã xóa người dùng thành công' });
+    if (user.role === 'admin') {
+      return res.status(400).json({ message: 'Không thể khóa tài khoản admin' });
+    }
+
+    if (user._id.toString() === req.user.id) {
+      return res.status(400).json({ message: 'Bạn không thể khóa chính tài khoản của mình' });
+    }
+
+    user.isLocked = !user.isLocked;
+    user.updatedAt = new Date();
+    await user.save();
+
+    const status = user.isLocked ? "khóa" : "mở khóa";
+    res.json({ 
+      message: `Đã ${status} tài khoản thành công`,
+      user: {
+        id: user._id,
+        name: user.name,
+        email: user.email,
+        role: user.role,
+        isLocked: user.isLocked
+      }
+    });
   } catch (err) {
-    console.error('❌ Error deleting user:', err);
     res.status(500).json({ message: 'Lỗi server', error: err.message });
   }
 });

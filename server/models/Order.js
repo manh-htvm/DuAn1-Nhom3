@@ -22,6 +22,19 @@ const orderItemSchema = new mongoose.Schema({
   size: {
     type: String,
     default: 'Free size'
+  },
+  // Snapshot sản phẩm tại thời điểm đặt hàng (để giữ nguyên thông tin khi admin sửa sản phẩm)
+  productName: {
+    type: String,
+    required: true
+  },
+  productImage: {
+    type: String,
+    default: ''
+  },
+  productDescription: {
+    type: String,
+    default: ''
   }
 });
 
@@ -75,6 +88,10 @@ const orderSchema = new mongoose.Schema({
   voucher: {
     type: mongoose.Schema.Types.ObjectId,
     ref: 'Voucher',
+    default: null
+  },
+  cancelReason: {
+    type: String,
     default: null
   },
   createdAt: {
